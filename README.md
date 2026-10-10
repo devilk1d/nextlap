@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next Lap Predictor
 
-## Getting Started
+Dashboard replay dan prediksi lap time F1 (LSTM/GRU, 2022–2025). Backend berupa Route Handler Next.js
+yang membaca database Supabase `nextlap` (read-only).
 
-First, run the development server:
+## Menjalankan
 
 ```bash
+cp .env.example .env.local   # isi SUPABASE_URL dan SUPABASE_PUBLISHABLE_KEY
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm test                     # unit test logika turunan (assemble + summary)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Hanya publishable key yang dipakai: RLS di database hanya mengizinkan `SELECT`, jadi service role
+tidak diperlukan. Key tidak pernah dikirim ke browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Endpoint
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Semua respons JSON dengan nama kolom persis seperti database (snake_case).
+Error selalu berbentuk `{ "error": { "code", "message", "details?" } }`.
 
-## Learn More
+| Endpoint | Isi |
+| --- | --- |
+| `GET /api/races?year=&circuit_key=` | Katalog balapan + sirkuit; `predictable=false` untuk balapan basah / tidak dimodelkan |
+| `GET /api/races/:raceId?model_run_id=` | Detail replay: `race`, `model`, `metrics`, `cars[]` → `laps[]` (lap + telemetri + `prediction` + `dirty_air`) |
+| `GET /api/races/:raceId/summary` | Ringkasan faktual: pemenang, pole, fastest lap, margin, strategi, SC/VSC/yellow, DNF, cuaca |
+| `GET /api/circuits` | Daftar sirkuit |
+| `GET /api/circuits/:circuitKey/history` | Ringkasan per musim di sirkuit tersebut |
+| `GET /api/models` | Daftar `model_runs` |
+| `GET /api/experiments?scheme=&model_type=` | Hasil eksperimen per fold |
 
-To learn more about Next.js, take a look at the following resources:
+Catatan penting:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `model_run_id` kosong → run dengan `is_default = true`.
+- Setiap `prediction` membawa `origin` (`out_of_fold` / `validation` / `in_sample`). Hanya
+  `in_sample` yang berasal dari data latih; jangan disajikan sebagai bukti generalisasi.
+- Balapan yang tidak dapat diprediksi mengembalikan hasil (`cars` tanpa `laps`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Struktur
 
-## Deploy on Vercel
+```
+app/api/**          route tipis: validasi input → panggil service
+server/
+  env.ts            validasi environment (zod)
+  http.ts           handle(), ApiError, parse()
+  db/               klien Supabase, tipe skema, helper query (unwrap, fetchAll)
+  reference/        circuits, teams, drivers (cached)
+  models/           model_runs, experiment_results
+  races/            repository → assemble (murni) → summary (murni) → service
+  circuits/         riwayat sirkuit
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Pembacaan database dibungkus `use cache` (`cacheLife('hours')`); logika turunan (`assemble`,
+`summary`) berupa fungsi murni di luar cache sehingga mudah diuji.
