@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Car, Lap, RaceDetail } from "@/server/races/types";
 import { flagOf } from "./lap-flags";
+import { noForecast, noForecastSummary } from "./laps";
 import {
   buildTimeline,
   distanceAt,
@@ -103,6 +104,59 @@ describe("replay clock helpers", () => {
     const run = timeline.runs[0];
     expect(lapBoundary(run, 100, 1)).toBeCloseTo(180.02);
     expect(lapBoundary(run, 100, -1)).toBeCloseTo(90.02);
+  });
+});
+
+describe("noForecast", () => {
+  const TOTAL = 30;
+  /** 20 clean green laps on one tyre set; `patch` changes single laps (by lap number). */
+  const runWith = (patch: (lapNumber: number) => Partial<Lap> = () => ({})) => {
+    const base = car("AAA", 90, 20);
+    base.laps = base.laps.map((lap) => ({
+      ...lap,
+      track_status: "1",
+      is_accurate: true,
+      rainfall: false,
+      tyre_life: lap.lap_number,
+      tel_valid_frac: 1,
+      tel_speed_max: 300,
+      tel_speed_min: 80,
+      tel_span_sec: 90,
+      ...patch(lap.lap_number),
+    }));
+    return buildTimeline(detail([base], TOTAL)).runs[0];
+  };
+  const reason = (run: ReturnType<typeof runWith>, lapNumber: number) =>
+    noForecast(run, run.laps[lapNumber - 1], TOTAL);
+
+  it("explains laps before the window is full", () => {
+    const run = runWith();
+    expect(reason(run, 2).kind).toBe("edge");
+    expect(reason(run, 5)).toMatchObject({ kind: "warm-up" });
+    expect(reason(run, 5).text).toContain("(2 so far)");
+    expect(reason(run, 10).kind).toBe("other");
+  });
+
+  it("flags missing tyre data in the source", () => {
+    const run = runWith((n) => (n <= 12 ? { stint: null, compound: null, tyre_life: null } : {}));
+    expect(reason(run, 8).kind).toBe("tyre-data");
+  });
+
+  it("skips two laps after a Safety Car, then warms up again", () => {
+    const run = runWith((n) => (n === 8 ? { is_safety_car: true, track_status: "4" } : {}));
+    expect(reason(run, 8).kind).toBe("neutralised");
+    expect(reason(run, 9).kind).toBe("restart");
+    expect(reason(run, 10).kind).toBe("restart");
+    expect(reason(run, 11).kind).toBe("warm-up");
+    expect(reason(run, 16).kind).toBe("other");
+  });
+
+  it("flags incomplete telemetry and counts reasons", () => {
+    const run = runWith((n) => (n === 7 ? { tel_valid_frac: 0.5 } : {}));
+    expect(reason(run, 7).kind).toBe("telemetry");
+    const summary = noForecastSummary(run, run.laps.slice(0, 8), TOTAL);
+    expect(summary.find((s) => s.kind === "telemetry")?.count).toBe(1);
+    expect(summary.reduce((sum, s) => sum + s.count, 0)).toBe(8);
   });
 });
 

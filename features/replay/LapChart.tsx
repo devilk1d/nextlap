@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Segmented";
 import { fmtLap, fmtLapAxis, fmtSigned, stripGrandPrix } from "@/lib/format";
 import { EVENT, tyreOf } from "@/lib/race/constants";
-import { isNeutralised, noForecastReason } from "@/lib/race/laps";
+import {
+  FORECAST_WARMUP_LAPS,
+  isNeutralised,
+  noForecast,
+  noForecastSummary,
+} from "@/lib/race/laps";
 import type { Standing } from "@/lib/race/timeline";
 import { clamp } from "@/lib/stats";
 import { linePath } from "@/lib/svg";
@@ -63,17 +68,17 @@ export function LapChart({ x, focus }: Props) {
 
   const hovered = hover !== null && hover < n ? laps[hover] : null;
   const hoveredRun = hovered ? run.laps[hovered.lap - 1] : null;
+  const missing = noForecastSummary(
+    run,
+    run.laps.slice(stint.start - 1, stint.end).filter((l) => l.lap_number <= completed),
+    race.total_laps,
+  );
+  const missingCount = missing.reduce((sum, m) => sum + m.count, 0);
   const note = (() => {
     if (!hovered || !hoveredRun) return "";
-    if (hoveredRun.flag && !isNeutralised(hoveredRun.flag))
-      return noForecastReason(hoveredRun, windowSize);
-    if (isNeutralised(hoveredRun.flag))
-      return `${EVENT[hoveredRun.flag].name} — lap excluded from model input and metrics`;
-    if (hovered.dirty) return "Dirty air — gap ahead under 1 s";
-    if (hovered.predicted === null && hover !== null && hover < windowSize) {
-      return `Warm-up: the model needs ${windowSize} laps first`;
-    }
-    return hovered.done ? "" : "Not raced yet at this point of the replay";
+    if (!hovered.shown) return "Not raced yet at this point of the replay";
+    if (hoveredRun.prediction === null) return noForecast(run, hoveredRun, race.total_laps).text;
+    return hovered.dirty ? "Dirty air: gap ahead under 1 s" : "";
   })();
   const delta =
     hovered?.done && hovered.predicted !== null && hovered.time !== null
@@ -134,6 +139,18 @@ export function LapChart({ x, focus }: Props) {
           </Button>
         </div>
       </div>
+
+      {missingCount > 0 && (
+        <div
+          className="border-b border-divider px-3.5 py-1.5 text-[11.5px] leading-[1.4] text-ink-dim"
+          title={`A forecast is only made for a clean lap that follows ${FORECAST_WARMUP_LAPS} clean laps in a row on the same tyres. Hover a lap to see why it has none.`}
+        >
+          <span className="font-semibold text-ink-soft">
+            No forecast on {missingCount} lap{missingCount > 1 ? "s" : ""}:
+          </span>{" "}
+          {missing.map((m) => `${m.label} (${m.count})`).join(" · ")}
+        </div>
+      )}
 
       <div
         className="relative mb-[30px] ml-[60px] mr-4 mt-3.5 min-h-[130px] flex-1"

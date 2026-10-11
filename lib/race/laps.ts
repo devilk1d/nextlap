@@ -73,22 +73,140 @@ export function flagColor(flag: LapFlag | null): string | null {
 export const isNeutralised = (flag: LapFlag | null): flag is NeutralisedKind =>
   flag === "SC" || flag === "VSC" || flag === "YEL" || flag === "RED";
 
-/** Why a lap carries no forecast, in plain words. */
-export function noForecastReason(lap: RunLap, windowSize: number): string {
+/**
+ * A forecast is only kept for a clean lap that follows this many clean laps in a row on the same
+ * tyres. It is the longest window tried in the study, so every window size is scored on the same
+ * laps.
+ */
+export const FORECAST_WARMUP_LAPS = 5;
+
+/** Telemetry coverage a lap needs to be used (same limit as the training data). */
+const MIN_TELEMETRY_COVERAGE = 0.9;
+
+export type NoForecastKind =
+  | "edge"
+  | "pit"
+  | "neutralised"
+  | "restart"
+  | "invalid"
+  | "rain"
+  | "telemetry"
+  | "tyre-data"
+  | "warm-up"
+  | "other";
+
+export type NoForecast = { kind: NoForecastKind; text: string };
+
+/** Short names used when a stint's missing forecasts are summed up. */
+export const NO_FORECAST_LABEL: Record<NoForecastKind, string> = {
+  edge: "first or last laps",
+  pit: "pit laps",
+  neutralised: "Safety Car, VSC or flags",
+  restart: "laps right after a flag",
+  invalid: "invalid lap times",
+  rain: "rain on track",
+  telemetry: "incomplete telemetry",
+  "tyre-data": "tyre data missing",
+  "warm-up": "warm-up laps",
+  other: "no stored forecast",
+};
+
+const isGreen = (lap: RunLap) => lap.track_status == null || lap.track_status === "1";
+
+/**
+ * Why this lap cannot be used as a clean lap, or null when it can. The checks follow the order of
+ * the model's data cleaning, so the reason shown is the first rule the lap breaks.
+ */
+function lapIssue(run: Run, index: number, totalLaps: number): NoForecast | null {
+  const lap = run.laps[index];
+  if (lap.flag === "START" || lap.lap_number <= 2) {
+    return { kind: "edge", text: "Race start: the first 2 laps are not modelled" };
+  }
+  if (lap.lap_number >= totalLaps) {
+    return { kind: "edge", text: "Final lap: not modelled" };
+  }
   switch (lap.flag) {
-    case "START":
-      return "Standing start — not modelled";
     case "PIT OUT":
-      return "Out-lap — includes pit exit, not modelled";
+      return { kind: "pit", text: "Out-lap: it includes leaving the pits, so it is not modelled" };
     case "PIT IN":
-      return "In-lap — includes pit entry, not modelled";
+      return { kind: "pit", text: "In-lap: it includes entering the pits, so it is not modelled" };
     case "SC":
     case "VSC":
     case "RED":
-      return `${EVENT[lap.flag].name} — neutralised lap, not modelled`;
+      return { kind: "neutralised", text: `${EVENT[lap.flag].name}: lap is not modelled` };
     case "YEL":
-      return "Yellow flag — lap excluded from model input";
-    default:
-      return `Warm-up — the model needs ${windowSize} laps on this tyre set`;
+      return { kind: "neutralised", text: "Yellow flag: lap is not modelled" };
   }
+  if (lap.is_deleted) {
+    return { kind: "invalid", text: "Lap time was deleted, so it is not used" };
+  }
+  if (lap.lap_time_sec === null || lap.is_accurate === false) {
+    return { kind: "invalid", text: "Lap time was not recorded accurately, so it is not used" };
+  }
+  if (lap.rainfall === true) {
+    return { kind: "rain", text: "Rain was recorded on track, so this lap is not used" };
+  }
+  if (!isGreen(lap)) {
+    return { kind: "neutralised", text: "Not a green-flag lap, so it is not modelled" };
+  }
+  if ([1, 2].some((back) => index - back >= 0 && !isGreen(run.laps[index - back]))) {
+    return {
+      kind: "restart",
+      text: "Right after a Safety Car, VSC or flag: the next 2 laps are skipped",
+    };
+  }
+  const span = lap.tel_span_sec;
+  const telemetryOk =
+    (lap.tel_valid_frac ?? 0) >= MIN_TELEMETRY_COVERAGE &&
+    (lap.tel_speed_max ?? 0) > 0 &&
+    (lap.tel_speed_min ?? 0) > 0 &&
+    span != null &&
+    Math.abs(span - lap.lap_time_sec) <= 1;
+  if (!telemetryOk) {
+    return { kind: "telemetry", text: "Telemetry for this lap is missing or incomplete" };
+  }
+  if (lap.stint === null || lap.compound === null || lap.tyre_life === null) {
+    return { kind: "tyre-data", text: "Tyre data is missing for this lap in the source data" };
+  }
+  return null;
+}
+
+/** Why a lap has no forecast, in plain words. Use it only for laps without a stored forecast. */
+export function noForecast(run: Run, lap: RunLap, totalLaps: number): NoForecast {
+  const index = run.laps.findIndex((candidate) => candidate.lap_number === lap.lap_number);
+  if (index < 0) return { kind: "other", text: "No forecast was stored for this lap" };
+
+  const own = lapIssue(run, index, totalLaps);
+  if (own) return own;
+
+  let streak = 0;
+  for (
+    let back = index - 1;
+    back >= 0 &&
+    run.laps[back].stintIndex === lap.stintIndex &&
+    lapIssue(run, back, totalLaps) === null;
+    back--
+  ) {
+    streak++;
+  }
+  if (streak < FORECAST_WARMUP_LAPS) {
+    return {
+      kind: "warm-up",
+      text: `Warm-up: needs ${FORECAST_WARMUP_LAPS} clean laps in a row on the same tyres (${streak} so far)`,
+    };
+  }
+  return { kind: "other", text: "No forecast was stored for this lap" };
+}
+
+/** Counts the given laps without a forecast by reason, largest group first. */
+export function noForecastSummary(run: Run, laps: RunLap[], totalLaps: number) {
+  const counts = new Map<NoForecastKind, number>();
+  for (const lap of laps) {
+    if (lap.prediction) continue;
+    const { kind } = noForecast(run, lap, totalLaps);
+    counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([kind, count]) => ({ kind, count, label: NO_FORECAST_LABEL[kind] }))
+    .sort((a, b) => b.count - a.count);
 }

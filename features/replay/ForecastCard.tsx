@@ -2,7 +2,7 @@
 
 import { fmtGap, fmtLap, fmtLapsDown, fmtSigned, fmtTimer } from "@/lib/format";
 import { EVENT, tyreOf } from "@/lib/race/constants";
-import { isNeutralised, noForecastReason, sectorShares } from "@/lib/race/laps";
+import { isNeutralised, noForecast, sectorShares } from "@/lib/race/laps";
 import { spans } from "@/lib/stats";
 import type { Standing } from "@/lib/race/timeline";
 import { useRace } from "@/features/dashboard/race-context";
@@ -17,7 +17,7 @@ function title(x: Standing): string {
   return `${isNeutralised(flag) ? EVENT[flag].name.toUpperCase() : "LAP IN PROGRESS"} · L${x.currentLap}`;
 }
 
-function note(x: Standing, leaderCode: string, windowSize: number): string {
+function note(x: Standing, leaderCode: string, totalLaps: number): string {
   const { run, lap } = x;
   if (x.retired)
     return `${run.status ?? "DNF"} on lap ${x.lapCount + 1} · ${x.lapCount} laps completed`;
@@ -27,7 +27,7 @@ function note(x: Standing, leaderCode: string, windowSize: number): string {
   }
   return lap.prediction
     ? `Forecast on ${tyreOf(lap.compound).name} tyres, ${lap.tyre_life ?? "–"} laps old`
-    : noForecastReason(lap, windowSize);
+    : `No forecast for this lap. ${noForecast(run, lap, totalLaps).text}`;
 }
 
 type Props = { x: Standing; focus: Focus; time: number; leaderCode: string };
@@ -90,7 +90,7 @@ export function ForecastCard({ x, focus, time, leaderCode }: Props) {
           {retired ? "DNF" : done ? `P${x.position}` : fmtLap(predicted)}
         </div>
         <div className="mt-1.5 text-[11.5px] text-ink-dim [text-wrap:pretty]">
-          {note(x, leaderCode, windowSize)}
+          {note(x, leaderCode, timeline.totalLaps)}
         </div>
 
         <div className="mt-3">
