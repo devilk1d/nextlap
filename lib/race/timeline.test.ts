@@ -5,7 +5,6 @@ import {
   buildTimeline,
   distanceAt,
   frameAt,
-  initialTime,
   lapBoundary,
   timeAt,
 } from "./timeline";
@@ -99,10 +98,6 @@ describe("frameAt", () => {
 
 describe("replay clock helpers", () => {
   const timeline = buildTimeline(detail([car("AAA", 90, 5)]));
-
-  it("starts the replay shortly after 40 % of the race", () => {
-    expect(initialTime(timeline)).toBeCloseTo(2 * 90 + 25);
-  });
 
   it("steps to the next and previous lap boundary", () => {
     const run = timeline.runs[0];

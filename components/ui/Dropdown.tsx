@@ -15,7 +15,8 @@ type Props = {
 
 /**
  * Trigger button with a floating menu. The menu is fixed-positioned so it is never clipped by
- * scrolling panels; it closes on outside click, Escape, resize or scroll.
+ * scrolling panels; it closes on outside click, Escape, resize or
+ * page scroll (scrolling the menu itself keeps it open).
  */
 export function Dropdown({ trigger, width, children, className, triggerClassName }: Props) {
   const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
@@ -25,19 +26,24 @@ export function Dropdown({ trigger, width, children, className, triggerClassName
   useEffect(() => {
     if (!open) return;
     const close = () => setAnchor(null);
+    const inside = (event: Event) => root.current?.contains(event.target as Node) ?? false;
     const onPointerDown = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) close();
+      if (!inside(event)) close();
+    };
+    // Scrolling the menu itself (wheel, touch or scrollbar drag) must keep it open.
+    const onScroll = (event: Event) => {
+      if (!inside(event)) close();
     };
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && close();
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKey);
     window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [open]);
 

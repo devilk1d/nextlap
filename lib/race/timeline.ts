@@ -252,15 +252,6 @@ export function frameAt(timeline: Timeline, t: number): Frame {
   };
 }
 
-/** Race time the replay opens at: shortly after the leader starts lap 40 % in. */
-export function initialTime(timeline: Timeline): number {
-  const lap = Math.round(timeline.totalLaps * 0.4);
-  const leaderAt = Math.min(
-    ...timeline.runs.filter((run) => run.cum.length > lap).map((run) => run.cum[lap]),
-  );
-  return clamp((Number.isFinite(leaderAt) ? leaderAt : 0) + 25, 0, timeline.end);
-}
-
 /** Race time of the previous (-1) or next (+1) lap boundary for a run. */
 export function lapBoundary(run: Run, t: number, direction: -1 | 1): number {
   const d = distanceAt(run.cum, t);

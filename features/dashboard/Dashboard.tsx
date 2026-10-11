@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import type { RaceInfo } from "@/server/races/types";
 import { useRaceDetail } from "@/lib/api";
-import { buildTimeline, initialTime } from "@/lib/race/timeline";
+import { buildTimeline } from "@/lib/race/timeline";
 import { H2HView } from "@/features/h2h/H2HView";
 import { HistoryView } from "@/features/history/HistoryView";
 import { OverviewView } from "@/features/overview/OverviewView";
@@ -29,7 +29,7 @@ export function Dashboard({ races }: { races: RaceInfo[] }) {
   usePlayback();
 
   useEffect(() => {
-    if (timeline) useReplay.getState().load(timeline.end, initialTime(timeline));
+    if (timeline) useReplay.getState().load(timeline.end, 0);
   }, [timeline]);
 
   if (!race) {
