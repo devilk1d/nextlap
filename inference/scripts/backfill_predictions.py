@@ -19,7 +19,7 @@ import os
 import httpx
 import pandas as pd
 
-from app.db import Database
+from app.db import Database, load_env
 from app.model import LapTimeModel
 from app.service import Predictor, metrics
 
@@ -31,6 +31,7 @@ def main() -> None:
     parser.add_argument("--write", action="store_true", help="upsert into lap_predictions")
     parser.add_argument("--out", default="predictions_final.csv")
     args = parser.parse_args()
+    load_env()
 
     predictor = Predictor(LapTimeModel.load(), Database(), cache_size=1)
     frames = []
