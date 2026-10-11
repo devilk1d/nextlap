@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: nextlap-inference
+    runtime: docker
+    rootDir: inference
+    dockerfilePath: ./inference/Dockerfile
+    dockerContext: ./inference
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: "*"

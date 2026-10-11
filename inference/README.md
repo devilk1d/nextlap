@@ -1,8 +1,8 @@
 # Next Lap inference API
 
 Service Python (FastAPI) yang menyajikan model final notebook v7 (LSTM, set fitur E, window 5)
-untuk prediksi lap time putaran berikutnya (t+1). Dideploy sebagai service terpisah di Railway;
-website Next.js tetap membaca Supabase.
+untuk prediksi lap time putaran berikutnya (t+1). Dideploy sebagai service terpisah di Render;
+website Next.js (di Vercel) tetap membaca Supabase.
 
 ## Cara kerja
 
@@ -32,7 +32,7 @@ Uji pada data asli dilakukan oleh `scripts/backfill_predictions.py`: RMSE pada b
 
 | Endpoint | Isi |
 | --- | --- |
-| `GET /health` | Status + jenis model (dipakai health check Railway) |
+| `GET /health` | Status + jenis model (dipakai health check Render) |
 | `GET /v1/model` | Kartu model: fitur, hyperparameter, daftar balapan validasi |
 | `GET /v1/races` | Balapan + `origin` (`in_sample` / `validation`) untuk model final |
 | `GET /v1/races/{race_id}/predictions?driver=VER&include_open=false` | Prediksi semua lap yang bisa diprediksi + metrik (RMSE, MAE, MAPE, Mean-3) |
@@ -66,7 +66,7 @@ pytest
 macOS / Linux: sama, ganti baris aktivasi dengan `source .venv/bin/activate` dan `cp .env.example .env`.
 
 File `.env` dibaca otomatis oleh `app/db.py`, jadi tidak perlu mengatur variabel lewat shell.
-Variabel yang sudah ada di environment tetap diutamakan (ini yang terjadi di Railway).
+Variabel yang sudah ada di environment tetap diutamakan (ini yang terjadi di Render).
 
 Jika model dilatih ulang, ekspor lagi lalu commit folder `model/`:
 
@@ -74,24 +74,27 @@ Jika model dilatih ulang, ekspor lagi lalu commit folder `model/`:
 python scripts/export_model.py ../experiment_results_v7
 ```
 
-## Deploy ke Railway
+## Deploy ke Render
 
-1. Railway → **New Project → Deploy from GitHub repo** → pilih `devilk1d/nextlap`.
-2. Buka service → **Settings → Source → Root Directory** = `/inference`.
-   Railway membaca `inference/railway.json` (builder Dockerfile, health check `/health`).
-3. **Variables**:
+Konfigurasi ada di `render.yaml` (root repo): satu web service Docker, Root Directory `inference`,
+health check `/health`, plan Free.
+
+1. Render → **New → Blueprint** → hubungkan repo `devilk1d/nextlap` dan pilih branch yang berisi
+   `render.yaml`. Render membaca file itu dan membuat service `nextlap-inference`.
+2. Saat diminta, isi dua variabel rahasia:
    - `SUPABASE_URL` = URL project `nextlap`
    - `SUPABASE_PUBLISHABLE_KEY` = publishable key (read-only, sama dengan website)
-   - `ALLOWED_ORIGINS` = domain website, mis. `https://nextlap.up.railway.app` (boleh `*`)
-4. **Settings → Networking → Generate Domain**. Cek `https://<domain>/health` lalu `/docs`.
+3. Setelah build selesai, buka `https://<nama-service>.onrender.com/health` lalu `/docs`.
+4. Di dashboard Render, ubah `ALLOWED_ORIGINS` dari `*` ke domain website di Vercel
+   (mis. `https://nextlap.vercel.app`; beberapa origin dipisah koma).
 
-Jangan isi `SUPABASE_SECRET_KEY` di Railway; key itu hanya untuk backfill dari laptop.
+Tanpa Blueprint (manual): **New → Web Service**, Language = Docker, Root Directory = `inference`,
+Health Check Path = `/health`, lalu isi variabel yang sama.
 
-### Website Next.js di Railway (opsional, project yang sama)
+Jangan isi `SUPABASE_SECRET_KEY` di Render; key itu hanya untuk backfill dari laptop.
 
-Tambah service kedua dari repo yang sama dengan Root Directory `/` (kosong). Railway mendeteksi
-Next.js otomatis (`npm run build`, `npm start`; `next start` memakai variabel `PORT`).
-Isi `SUPABASE_URL` dan `SUPABASE_PUBLISHABLE_KEY`, lalu Generate Domain.
+Catatan plan Free: service tidur setelah ±15 menit tanpa permintaan, jadi permintaan pertama
+sesudahnya bisa butuh beberapa puluh detik. Buka `/health` beberapa menit sebelum demo.
 
 ## Menyimpan prediksi model final ke Supabase (opsional)
 

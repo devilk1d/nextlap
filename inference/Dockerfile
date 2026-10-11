@@ -9,5 +9,5 @@ RUN pip install -r requirements.txt
 COPY app ./app
 COPY model ./model
 
-# Railway injects PORT; 8000 is the local default.
+# Render sets PORT via render.yaml; 8000 is the local default.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WEB_CONCURRENCY:-1}"]

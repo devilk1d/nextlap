@@ -81,7 +81,7 @@ lib/
   race/               timeline engine (replay), flag lap, event balapan, geometri lintasan
   format.ts stats.ts  format waktu dan statistik kecil yang dipakai ulang
 data/                 geometri lintasan 25 sirkuit, permutation importance
-inference/            API model (Python, Railway)
+inference/            API model (Python, Render)
 scripts/              pembuat data/track-geometry.json
 ```
 
@@ -100,7 +100,7 @@ Grafik sengaja digambar dengan SVG/CSS sendiri: desain memakai gaya visual khusu
 band SC/VSC, marker prediksi) yang tidak dicapai library chart tanpa banyak override.
 Font (Barlow, Barlow Condensed, Michroma, JetBrains Mono) dimuat lewat `next/font/google`.
 
-## Model di Railway
+## Model di Render
 
 Folder `inference/` berisi API Python (FastAPI) yang menjalankan model final notebook (LSTM,
 window 5) langsung dari data Supabase. Cara kerja, pengujian paritas dengan notebook, dan langkah
