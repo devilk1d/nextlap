@@ -95,7 +95,8 @@ Isi `SUPABASE_URL` dan `SUPABASE_PUBLISHABLE_KEY`, lalu Generate Domain.
 
 ## Menyimpan prediksi model final ke Supabase (opsional)
 
-Run `final:LSTM:E` (id 43) sudah ada di `model_runs` tetapi belum punya prediksi. Untuk mengisinya:
+Run `final:LSTM:E` (id 43) dan pembanding `final:Mean-3` (id 44) ada di `model_runs`. Skrip ini mengisi
+prediksi keduanya (Mean-3 memakai label `origin` yang sama dengan LSTM, karena website membandingkan per origin):
 
 ```bash
 cd inference
@@ -105,5 +106,7 @@ python -m scripts.backfill_predictions --write
 ```
 
 Setelah itu prediksinya tersedia lewat `GET /api/races/:raceId?model_run_id=43` di website. Dashboard
-sendiri memakai run dengan `is_default = true` (saat ini run 41, out-of-fold); sebaiknya tetap begitu,
-karena sebagian besar prediksi run 43 berlabel `in_sample`.
+memakai run dengan `is_default = true`. Jika run 43 dijadikan default, ingat bahwa 31.460 dari 40.440
+prediksinya berlabel `in_sample` (data latih); untuk klaim generalisasi gunakan run 41 (out-of-fold).
+Website menyimpan hasil query di cache (`"use cache"`, beberapa jam), jadi perubahan `is_default`
+baru terlihat setelah server di-restart / redeploy.
