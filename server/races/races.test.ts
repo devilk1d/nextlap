@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RaceEntryRow } from "@/server/db/schema";
 import { assembleRaceDetail } from "./assemble";
+import { buildMetrics } from "./metrics";
 import { summarizeRace } from "./summary";
 import type { RaceBundle, RaceInfo } from "./types";
 
@@ -125,5 +126,26 @@ describe("summarizeRace", () => {
   it("averages temperatures over laps that have a reading", () => {
     expect(summary.mean_track_temp_c).toBe(31);
     expect(summary.mean_air_temp_c).toBeNull();
+  });
+});
+
+describe("buildMetrics", () => {
+  const laps = [lap("VER", 2, { lap_time_sec: 90 }), lap("VER", 3, { lap_time_sec: 92 }), lap("VER", 4, { lap_time_sec: null })];
+  const predict = (lap_number: number, predicted_lap_time_sec: number, origin: "out_of_fold" | "in_sample" = "out_of_fold") => ({
+    driver_code: "VER",
+    lap_number,
+    predicted_lap_time_sec,
+    origin,
+  });
+
+  it("scores predictions against actual lap times, skipping laps without a time", () => {
+    const [metric] = buildMetrics(laps, [predict(2, 91), predict(3, 91), predict(4, 95)], []);
+    expect(metric).toMatchObject({ origin: "out_of_fold", n_laps: 2, rmse: 1, mae: 1, rmse_mean3: null });
+  });
+
+  it("reports the baseline RMSE for the same origin", () => {
+    const [metric] = buildMetrics(laps, [predict(2, 90), predict(3, 92)], [predict(2, 92), predict(3, 90)]);
+    expect(metric.rmse).toBe(0);
+    expect(metric.rmse_mean3).toBe(2);
   });
 });

@@ -4,7 +4,7 @@ import type {
   LapPredictionRow,
   LapRow,
   LapTelemetryRow,
-  PredictionMetricRow,
+  PredictionOrigin,
   RaceEntryRow,
   RaceRow,
 } from "@/server/db/schema";
@@ -45,11 +45,20 @@ export type Car = Omit<RaceEntryRow, "race_id"> & {
   laps: Lap[];
 };
 
+/** Accuracy of the selected run on one race; `rmse_mean3` is the Mean-3 baseline on the same laps. */
+export type RaceMetric = {
+  origin: PredictionOrigin;
+  n_laps: number;
+  rmse: number;
+  mae: number;
+  rmse_mean3: number | null;
+};
+
 export type RaceDetail = {
   race: RaceInfo;
   /** Run the predictions come from; null when none is selected or flagged as default. */
   model: ModelRun | null;
-  metrics: Omit<PredictionMetricRow, "model_run_id" | "race_id">[];
+  metrics: RaceMetric[];
   cars: Car[];
 };
 
@@ -65,11 +74,28 @@ export type RaceSummary = {
   winning_margin_sec: number | null;
   winning_strategy: Compound[];
   avg_pit_stops: number | null;
+  /** Finishers by number of stops: "0", "1", "2", "3+". */
+  stops_distribution: Record<string, number>;
   dnf_count: number;
+  /** Times the race leader changed between lap lines. */
+  lead_changes: number;
+  /** On-track positions gained on racing laps, summed over the field. */
+  positions_gained: number;
+  /** Median of the median clean laps of the ten classified front-runners. */
+  top10_median_lap_sec: number | null;
   /** Distinct periods: runs of consecutive laps in which any car was affected. */
   incidents: { safety_car: number; vsc: number; yellow: number; red_flag: number };
   mean_track_temp_c: number | null;
   mean_air_temp_c: number | null;
   /** Share of recorded laps per compound (0..1). */
   compound_share: Partial<Record<Compound, number>>;
+  /** Net lap-time trend per lap of tyre life on clean laps (fuel burn-off included). */
+  degradation: Partial<Record<Compound, { slope: number; laps: number }>>;
+  results: {
+    driver_code: string;
+    driver_name: string | null;
+    team_color: string | null;
+    finish_position: number | null;
+    classified_position: string | null;
+  }[];
 };

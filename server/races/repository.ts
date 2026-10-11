@@ -23,15 +23,18 @@ export async function getRaceBundle(raceId: number, modelRunId?: number): Promis
   return { entries, laps, predictions };
 }
 
-export async function getPredictionMetrics(raceId: number, modelRunId: number) {
+/** Stored predictions of one run on one race (primary-key prefix, so it stays fast). */
+export async function getRunPredictions(raceId: number, modelRunId: number) {
   "use cache";
   cacheLife("hours");
-  return unwrap(
-    await db()
-      .from("prediction_race_metrics")
-      .select("origin, n_laps, rmse, mae, rmse_mean3")
+  return fetchAll((from, to) =>
+    db()
+      .from("lap_predictions")
+      .select("driver_code, lap_number, predicted_lap_time_sec, origin")
       .eq("race_id", raceId)
       .eq("model_run_id", modelRunId)
-      .order("origin"),
+      .order("driver_code")
+      .order("lap_number")
+      .range(from, to),
   );
 }

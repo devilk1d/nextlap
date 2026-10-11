@@ -16,6 +16,18 @@ export async function resolveModelRun(id?: number): Promise<ModelRun | null> {
   return run;
 }
 
+/** Mean-3 run evaluated under the same protocol (purpose and scheme) as `model`. */
+export async function resolveBaselineRun(model: ModelRun): Promise<ModelRun | null> {
+  if (model.model_type === "Mean-3") return model;
+  const runs = await getModelRuns();
+  return (
+    runs.find(
+      (run) =>
+        run.model_type === "Mean-3" && run.purpose === model.purpose && run.scheme === model.scheme,
+    ) ?? null
+  );
+}
+
 export async function listExperiments({ scheme, model_type }: ExperimentFilter) {
   const results = await getExperimentResults();
   return results.filter(
