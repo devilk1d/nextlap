@@ -1,11 +1,9 @@
 import type { Compound } from "@/server/db/schema";
+import { isCleanLap } from "@/lib/race/lap-flags";
+import { linearFit, mean, median, present } from "@/lib/stats";
 import type { Car, Lap, RaceDetail, RaceSummary } from "./types";
 
-const present = (value: number | null): value is number => value !== null;
-
-function mean(values: number[]) {
-  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-}
+const DRY: Compound[] = ["SOFT", "MEDIUM", "HARD"];
 
 /** Counts runs of consecutive laps (across all cars) for which `flagged` holds. */
 function countPeriods(laps: Lap[], flagged: (lap: Lap) => boolean | null) {
@@ -65,6 +63,42 @@ function compoundShare(laps: Lap[]) {
   );
 }
 
+/** Times a different car led at the end of a lap than at the end of the previous one. */
+function leadChanges(laps: Lap[], cars: Car[]) {
+  const leaderByLap = new Map<number, string>();
+  for (const car of cars) {
+    for (const lap of car.laps) if (lap.position === 1) leaderByLap.set(lap.lap_number, car.driver_code);
+  }
+  const order = [...leaderByLap.keys()].sort((a, b) => a - b);
+  return order.filter((lap, i) => i > 0 && leaderByLap.get(lap) !== leaderByLap.get(order[i - 1])).length;
+}
+
+/** Positions gained on track: lap-to-lap improvements on racing laps (pit, start and flag laps excluded). */
+function positionsGained(cars: Car[]) {
+  let gained = 0;
+  for (const car of cars) {
+    car.laps.forEach((lap, i) => {
+      const previous = car.laps[i - 1];
+      if (!previous || !isCleanLap(lap) || lap.position === null || previous.position === null) return;
+      gained += Math.max(0, previous.position - lap.position);
+    });
+  }
+  return gained;
+}
+
+function degradation(laps: Lap[]): RaceSummary["degradation"] {
+  const result: RaceSummary["degradation"] = {};
+  for (const compound of DRY) {
+    const fit = linearFit(
+      laps
+        .filter((lap) => isCleanLap(lap) && lap.compound === compound && lap.tyre_life !== null)
+        .map((lap) => ({ x: lap.tyre_life as number, y: lap.lap_time_sec as number })),
+    );
+    if (fit) result[compound] = { slope: fit.slope, laps: fit.n };
+  }
+  return result;
+}
+
 /** Factual race aggregates (no modelling) for the overview and circuit-history views. */
 export function summarizeRace({ race, cars }: RaceDetail): RaceSummary {
   const laps = cars.flatMap((car) => car.laps);
@@ -75,6 +109,15 @@ export function summarizeRace({ race, cars }: RaceDetail): RaceSummary {
   const stops = cars
     .filter((car) => !retired(car) && car.laps.length > 0)
     .map((car) => Math.max(0, strategyOf(car).length - 1));
+  const stopsDistribution: Record<string, number> = {};
+  for (const count of stops) {
+    const key = count >= 3 ? "3+" : String(count);
+    stopsDistribution[key] = (stopsDistribution[key] ?? 0) + 1;
+  }
+  const topTenPace = cars
+    .filter((car) => car.finish_position !== null && car.finish_position <= 10)
+    .map((car) => median(car.laps.filter(isCleanLap).map((lap) => lap.lap_time_sec as number)))
+    .filter(present);
 
   return {
     race_id: race.race_id,
@@ -90,7 +133,11 @@ export function summarizeRace({ race, cars }: RaceDetail): RaceSummary {
     winning_margin_sec: winner && runnerUp ? marginSec(winner, runnerUp) : null,
     winning_strategy: winner ? strategyOf(winner) : [],
     avg_pit_stops: mean(stops),
+    stops_distribution: stopsDistribution,
     dnf_count: cars.filter(retired).length,
+    lead_changes: leadChanges(laps, cars),
+    positions_gained: positionsGained(cars),
+    top10_median_lap_sec: median(topTenPace),
     incidents: {
       safety_car: countPeriods(laps, (lap) => lap.is_safety_car),
       vsc: countPeriods(laps, (lap) => lap.is_vsc),
@@ -100,5 +147,13 @@ export function summarizeRace({ race, cars }: RaceDetail): RaceSummary {
     mean_track_temp_c: mean(laps.map((lap) => lap.track_temp).filter(present)),
     mean_air_temp_c: mean(laps.map((lap) => lap.air_temp).filter(present)),
     compound_share: compoundShare(laps),
+    degradation: degradation(laps),
+    results: cars.map((car) => ({
+      driver_code: car.driver_code,
+      driver_name: car.driver_name,
+      team_color: car.team_color,
+      finish_position: car.finish_position,
+      classified_position: car.classified_position,
+    })),
   };
 }

@@ -200,16 +200,6 @@ export type ExperimentResultRow = {
   batch_size: number | null;
 };
 
-export type PredictionMetricRow = {
-  model_run_id: number;
-  race_id: number;
-  origin: PredictionOrigin;
-  n_laps: number;
-  rmse: number;
-  mae: number;
-  rmse_mean3: number | null;
-};
-
 type ReadOnlyTable<Row> = {
   Row: Row;
   Insert: never;
@@ -231,9 +221,7 @@ export type Database = {
       lap_predictions: ReadOnlyTable<LapPredictionRow>;
       experiment_results: ReadOnlyTable<ExperimentResultRow>;
     };
-    Views: {
-      prediction_race_metrics: { Row: PredictionMetricRow; Relationships: [] };
-    };
+    Views: { [_ in never]: never };
     Functions: {
       race_bundle: {
         Args: { p_race_id: number; p_model_run_id?: number };

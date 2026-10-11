@@ -1,13 +1,10 @@
 import type { DriverRow, TeamRow } from "@/server/db/schema";
 import type { ModelRun } from "@/server/models/service";
-import { groupBy, omit } from "@/server/utils";
+import { groupBy, omit } from "@/lib/collections";
 import type { Car, Lap, RaceBundle, RaceDetail, RaceInfo } from "./types";
 
-/**
- * Dirty-air threshold in seconds, taken from the dashboard prototype.
- * Keep it identical to the proximity definition used in the training notebook.
- */
-export const DIRTY_AIR_GAP_SEC = 0.8;
+/** Gap to the car ahead (s) under which a lap counts as dirty air; matches `dirty_air_gap` in the final run's hyperparams. */
+export const DIRTY_AIR_GAP_SEC = 1;
 
 type Input = {
   race: RaceInfo;
@@ -18,7 +15,7 @@ type Input = {
   drivers: DriverRow[];
 };
 
-const lapKey = (driverCode: string, lapNumber: number) => `${driverCode}:${lapNumber}`;
+export const lapKey = (driverCode: string, lapNumber: number) => `${driverCode}:${lapNumber}`;
 
 function isDirtyAir(lap: RaceBundle["laps"][number]) {
   const neutralised = lap.is_safety_car || lap.is_vsc || lap.is_red_flag;

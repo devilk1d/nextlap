@@ -1,17 +1,19 @@
 import "server-only";
 import type { PostgrestError } from "@supabase/supabase-js";
-import { ApiError } from "@/server/http";
 
 type Result<T> = { data: T | null; error: PostgrestError | null };
 
 // PostgREST truncates responses at 1000 rows (Supabase default `max_rows`).
 const PAGE_SIZE = 1000;
 
-/** Returns the payload of a Supabase response, or raises a 502 without leaking DB internals. */
+/**
+ * Returns the payload of a Supabase response or throws a plain `Error`.
+ * Repositories run inside `use cache`, where custom error classes do not survive,
+ * so `handle()` reports these as 500 and the message stays in the server log.
+ */
 export function unwrap<T>({ data, error }: Result<T>): T {
   if (error || data === null) {
-    console.error("[supabase]", error);
-    throw new ApiError(502, "upstream_error", "Database request failed");
+    throw new Error(`Supabase request failed: ${error?.message ?? "empty response"}`);
   }
   return data;
 }

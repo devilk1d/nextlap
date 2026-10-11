@@ -1,26 +1,131 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Layout switches to the three-column dashboard at the same width as the original design. */
+@custom-variant wide (@media (min-width: 1180px));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-barlow), system-ui, sans-serif;
+  --font-cond: var(--font-barlow-condensed), sans-serif;
+  --font-display: var(--font-michroma), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  /* surfaces */
+  --color-page: #0d0d0f;
+  --color-panel: #17171a;
+  --color-stage: #141416;
+  --color-raised: #1d1d21;
+  --color-inset: #1b1b1f;
+  --color-well: #111113;
+  --color-selected: #26262b;
+  --color-pressed: #2a2a30;
+  --color-tooltip: #1f1f23;
+  /* borders */
+  --color-line: #27272c;
+  --color-divider: #222227;
+  --color-hairline: #26262b;
+  --color-rowline: #1f1f23;
+  --color-control: #2c2c32;
+  --color-overlay: #2e2e34;
+  --color-popover: #33333a;
+  /* text */
+  --color-ink: #ededee;
+  --color-ink-soft: #c9c9cf;
+  --color-ink-dim: #a0a0a8;
+  --color-ink-mute: #9a9aa3;
+  --color-ink-faint: #5c5c64;
+  /* accent and signal colours */
+  --color-accent: #ff6b1f;
+  --color-accent-soft: #ff9a5c;
+  --color-go: #3ddc84;
+  --color-stop: #ff5a5a;
+  --color-caution: #f5c518;
+  --color-best: #b44cff;
+}
+
+/* Base rules live in a layer so utility classes (e.g. font-cond on buttons) can override them. */
+@layer base {
+  html {
+    background: var(--color-page);
+    /* The design uses the browser default; Tailwind's preflight would set 1.5. */
+    line-height: unset;
+  }
+
+  /* Font size goes on body, not html: Tailwind spacing is rem-based and must stay 16px per rem. */
+  body {
+    margin: 0;
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-barlow), system-ui, sans-serif;
+    font-size: 13px;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--color-accent-soft);
+  }
+
+  button {
+    font-family: inherit;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
+::-webkit-scrollbar-thumb {
+  background: var(--color-control);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes load-sweep {
+  0% {
+    left: -35%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Dashboard grid: stacked on narrow screens, three columns when wide. */
+.shell {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  min-height: 100vh;
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "head" "trans" "main" "left" "right";
+}
+.shell[data-layout="page"] {
+  grid-template-areas: "head" "main";
+}
+.shell[data-layout="page-transport"] {
+  grid-template-areas: "head" "trans" "main";
+}
+
+@media (min-width: 1180px) {
+  .shell {
+    height: 100vh;
+    overflow: hidden;
+    grid-template-columns: 300px minmax(0, 1fr) 320px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "head head head" "left main right" "left trans right";
+  }
+  .shell[data-layout="page"] {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "head head head" "main main main";
+  }
+  .shell[data-layout="page-transport"] {
+    grid-template-areas: "head head head" "main main main" "trans trans trans";
+  }
+}
+
