@@ -60,3 +60,17 @@ def test_origin_split_is_last_fifth_by_date():
     origins = race_origins(races)
     assert [origins[i] for i in range(1, 11)].count("validation") == 2
     assert origins[10] == origins[9] == "validation"
+
+
+def test_load_env_reads_windows_style_file(tmp_path, monkeypatch):
+    from app.db import load_env
+    env = tmp_path / ".env"
+    env.write_bytes("﻿# comment\r\nSUPABASE_URL=https://x.supabase.co\r\nSUPABASE_PUBLISHABLE_KEY=\"abc\"\r\nEMPTY=\r\n".encode("utf-8"))
+    for k in ("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "EMPTY"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "from-shell")
+    load_env(env)
+    import os
+    assert os.environ["SUPABASE_URL"] == "https://x.supabase.co"
+    assert os.environ["SUPABASE_PUBLISHABLE_KEY"] == "from-shell"  # real env wins
+    assert os.environ["EMPTY"] == ""

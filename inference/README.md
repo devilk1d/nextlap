@@ -51,15 +51,22 @@ sehingga ini replay protokol penelitian, bukan feed real-time.
 
 ## Menjalankan lokal
 
-```bash
+Windows (PowerShell):
+
+```powershell
 cd inference
-python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
-cp .env.example .env                                   # isi SUPABASE_URL dan SUPABASE_PUBLISHABLE_KEY
-set -a && source .env && set +a                        # Windows PowerShell: set manual $env:SUPABASE_URL=...
-uvicorn app.main:app --reload                          # http://localhost:8000/docs
+Copy-Item .env.example .env        # lalu isi SUPABASE_URL dan SUPABASE_PUBLISHABLE_KEY di .env
+uvicorn app.main:app --reload      # http://localhost:8000/docs
 pytest
 ```
+
+macOS / Linux: sama, ganti baris aktivasi dengan `source .venv/bin/activate` dan `cp .env.example .env`.
+
+File `.env` dibaca otomatis oleh `app/db.py`, jadi tidak perlu mengatur variabel lewat shell.
+Variabel yang sudah ada di environment tetap diutamakan (ini yang terjadi di Railway).
 
 Jika model dilatih ulang, ekspor lagi lalu commit folder `model/`:
 
@@ -93,7 +100,8 @@ Run `final:LSTM:E` (id 43) sudah ada di `model_runs` tetapi belum punya prediksi
 ```bash
 cd inference
 python -m scripts.backfill_predictions            # hitung + cetak RMSE per balapan dan per origin
-SUPABASE_SECRET_KEY=... python -m scripts.backfill_predictions --write
+# isi SUPABASE_SECRET_KEY di .env (hanya di laptop), lalu:
+python -m scripts.backfill_predictions --write
 ```
 
 Setelah itu prediksinya tersedia lewat `GET /api/races/:raceId?model_run_id=43` di website. Dashboard
