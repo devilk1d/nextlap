@@ -80,7 +80,9 @@ components/
 lib/
   race/               timeline engine (replay), flag lap, event balapan, geometri lintasan
   format.ts stats.ts  format waktu dan statistik kecil yang dipakai ulang
-data/                 geometri lintasan 10 sirkuit studi, permutation importance
+data/                 geometri lintasan 25 sirkuit, permutation importance
+inference/            API model (Python, Railway)
+scripts/              pembuat data/track-geometry.json
 ```
 
 ## Library
@@ -98,10 +100,20 @@ Grafik sengaja digambar dengan SVG/CSS sendiri: desain memakai gaya visual khusu
 band SC/VSC, marker prediksi) yang tidak dicapai library chart tanpa banyak override.
 Font (Barlow, Barlow Condensed, Michroma, JetBrains Mono) dimuat lewat `next/font/google`.
 
-## Data yang perlu dilengkapi
+## Model di Railway
 
-- `data/permutation-importance.json`: isi dengan keluaran notebook (`[{feature, label, importance}]`);
-  tab **Context** pada Lap replay otomatis menampilkannya.
-- `circuits.official_name`, `country_code`, `length_km` hanya terisi untuk 10 sirkuit studi.
-- Garis lintasan (`data/track-geometry.json`) hanya tersedia untuk 10 sirkuit studi; sirkuit lain
-  menampilkan pemberitahuan.
+Folder `inference/` berisi API Python (FastAPI) yang menjalankan model final notebook (LSTM,
+window 5) langsung dari data Supabase. Cara kerja, pengujian paritas dengan notebook, dan langkah
+deploy ada di [`inference/README.md`](inference/README.md).
+
+## Data pendukung
+
+- `data/permutation-importance.json`: permutation importance per **kelompok fitur** dari model final
+  (notebook bagian 14.3, rata-rata 5 ulangan, satuan detik RMSE). Tab **Context** pada Lap replay
+  menampilkannya.
+- `data/track-geometry.json`: garis lintasan ke-25 sirkuit dataset, dari
+  [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (GeoJSON, lisensi MIT). Sirkuit
+  baru ditambahkan dengan `python scripts/build_track_geometry.py`. Titik awal garis = garis
+  start/finish menurut sumber tersebut; untuk 15 sirkuit non-studi posisinya belum dicek manual.
+- `circuits.official_name`, `country_code`, `length_km` sudah terisi untuk semua sirkuit
+  (`supabase/fill_circuit_metadata.sql`).

@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# local copy of the notebook results (model_final.keras etc.)
+/experiment_results_v7
+!.env.example

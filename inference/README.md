@@ -1,0 +1,101 @@
+# Next Lap inference API
+
+Service Python (FastAPI) yang menyajikan model final notebook v7 (LSTM, set fitur E, window 5)
+untuk prediksi lap time putaran berikutnya (t+1). Dideploy sebagai service terpisah di Railway;
+website Next.js tetap membaca Supabase.
+
+## Cara kerja
+
+```
+Supabase (laps + lap_telemetry, read-only)
+  → app/pipeline.py   pembersihan + rekayasa fitur, salinan langkah notebook (bagian 3.2, 4, 6, 7)
+  → app/model.py      normalisasi window + MinMax scaler + forward pass LSTM dengan NumPy
+  → prediksi = rata-rata lap time window + keluaran model
+```
+
+Model dijalankan dengan NumPy, bukan TensorFlow: bobot `model_final.keras` diekspor ke
+`model/weights.npz` dan scaler ke `model/scaler.json`. Image jadi kecil (±250 MB, tanpa
+TensorFlow ±2 GB) dan RAM cukup ±150 MB. Selisih terhadap Keras < 0,000001 detik.
+
+Pengujian (`tests/`):
+
+| Uji | Isi |
+| --- | --- |
+| `test_parity.py` | Pipeline API vs salinan verbatim kode notebook (`tests/notebook_reference.py`) pada balapan sintetis berisi pit stop, SC, bendera kuning, lap dihapus, telemetri rusak, hujan, balapan ban basah. Input window, target, dan prediksi harus identik, baik semua balapan sekaligus maupun per balapan. |
+| `test_parity.py::test_numpy_forward_matches_keras` | Forward pass NumPy vs Keras (jalan bila TensorFlow terpasang dan `experiment_results_v7/` ada di root repo). |
+| `test_api.py` | Semua endpoint dengan database tiruan. |
+
+Uji pada data asli dilakukan oleh `scripts/backfill_predictions.py`: RMSE pada balapan validasi
+(semua pembalap) harus sama dengan "RMSE without permutation" di notebook bagian 14.3 (**0,4505 s**).
+
+## Endpoint
+
+| Endpoint | Isi |
+| --- | --- |
+| `GET /health` | Status + jenis model (dipakai health check Railway) |
+| `GET /v1/model` | Kartu model: fitur, hyperparameter, daftar balapan validasi |
+| `GET /v1/races` | Balapan + `origin` (`in_sample` / `validation`) untuk model final |
+| `GET /v1/races/{race_id}/predictions?driver=VER&include_open=false` | Prediksi semua lap yang bisa diprediksi + metrik (RMSE, MAE, MAPE, Mean-3) |
+| `GET /v1/races/{race_id}/drivers/{kode}/laps/{lap}` | Prakiraan satu lap dari 5 lap bersih sebelumnya |
+| `POST /v1/predict` | Prediksi dari window fitur mentah `{ "windows": [[[55 nilai] × 5], ...] }` |
+| `GET /docs` | Dokumentasi interaktif (Swagger) |
+
+`include_open=true` menambahkan prakiraan untuk lap setelah window bersih terakhir tiap stint
+(misalnya lap masuk pit); lap ini tidak punya padanan di notebook sehingga tidak masuk metrik.
+
+Catatan jujur untuk skripsi: model final dilatih pada ±80% balapan awal kalender, jadi prediksinya
+pada balapan `in_sample` berasal dari data latih. Untuk klaim generalisasi tetap pakai run
+`generalization:unseen:LSTM:E` (default dashboard, prediksi out-of-fold). Pembersihan data juga
+memakai statistik satu balapan penuh (median balapan, tren stint terpusat), sama seperti notebook,
+sehingga ini replay protokol penelitian, bukan feed real-time.
+
+## Menjalankan lokal
+
+```bash
+cd inference
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+cp .env.example .env                                   # isi SUPABASE_URL dan SUPABASE_PUBLISHABLE_KEY
+set -a && source .env && set +a                        # Windows PowerShell: set manual $env:SUPABASE_URL=...
+uvicorn app.main:app --reload                          # http://localhost:8000/docs
+pytest
+```
+
+Jika model dilatih ulang, ekspor lagi lalu commit folder `model/`:
+
+```bash
+python scripts/export_model.py ../experiment_results_v7
+```
+
+## Deploy ke Railway
+
+1. Railway → **New Project → Deploy from GitHub repo** → pilih `devilk1d/nextlap`.
+2. Buka service → **Settings → Source → Root Directory** = `/inference`.
+   Railway membaca `inference/railway.json` (builder Dockerfile, health check `/health`).
+3. **Variables**:
+   - `SUPABASE_URL` = URL project `nextlap`
+   - `SUPABASE_PUBLISHABLE_KEY` = publishable key (read-only, sama dengan website)
+   - `ALLOWED_ORIGINS` = domain website, mis. `https://nextlap.up.railway.app` (boleh `*`)
+4. **Settings → Networking → Generate Domain**. Cek `https://<domain>/health` lalu `/docs`.
+
+Jangan isi `SUPABASE_SECRET_KEY` di Railway; key itu hanya untuk backfill dari laptop.
+
+### Website Next.js di Railway (opsional, project yang sama)
+
+Tambah service kedua dari repo yang sama dengan Root Directory `/` (kosong). Railway mendeteksi
+Next.js otomatis (`npm run build`, `npm start`; `next start` memakai variabel `PORT`).
+Isi `SUPABASE_URL` dan `SUPABASE_PUBLISHABLE_KEY`, lalu Generate Domain.
+
+## Menyimpan prediksi model final ke Supabase (opsional)
+
+Run `final:LSTM:E` (id 43) sudah ada di `model_runs` tetapi belum punya prediksi. Untuk mengisinya:
+
+```bash
+cd inference
+python -m scripts.backfill_predictions            # hitung + cetak RMSE per balapan dan per origin
+SUPABASE_SECRET_KEY=... python -m scripts.backfill_predictions --write
+```
+
+Setelah itu prediksinya tersedia lewat `GET /api/races/:raceId?model_run_id=43` di website. Dashboard
+sendiri memakai run dengan `is_default = true` (saat ini run 41, out-of-fold); sebaiknya tetap begitu,
+karena sebagian besar prediksi run 43 berlabel `in_sample`.

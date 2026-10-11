@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "feature": "traffic",
+    "label": "Traffic (gaps, dirty air, cars nearby)",
+    "importance": 0.0661
+  },
+  {
+    "feature": "history",
+    "label": "Lap history (lap & sector times, race progress)",
+    "importance": 0.057
+  },
+  {
+    "feature": "telemetry",
+    "label": "Telemetry & speed traps",
+    "importance": 0.0203
+  },
+  {
+    "feature": "track evolution",
+    "label": "Track evolution (field pace change)",
+    "importance": 0.005
+  },
+  {
+    "feature": "weather",
+    "label": "Weather",
+    "importance": 0.0023
+  },
+  {
+    "feature": "tyre",
+    "label": "Tyre (compound, age, fresh set)",
+    "importance": 0.0021
+  }
+]
