@@ -62,6 +62,21 @@ def test_origin_split_is_last_fifth_by_date():
     assert origins[10] == origins[9] == "validation"
 
 
+def test_backfill_rows_for_model_and_baseline():
+    import pandas as pd
+    from scripts.backfill_predictions import RUNS, prediction_rows
+    frame = pd.DataFrame({"race_id": [1, 1], "driver_code": ["VER", "VER"], "lap_number": [6, 7],
+                          "predicted_lap_time_sec": [90.1, 90.2], "mean3_sec": [90.5, 90.6],
+                          "origin": ["validation", "validation"], "actual_lap_time_sec": [90.0, 90.3]})
+    lstm = prediction_rows(frame, 43, RUNS["final:LSTM:E"])
+    base = prediction_rows(frame, 44, RUNS["final:Mean-3"])
+    assert [r["predicted_lap_time_sec"] for r in lstm] == [90.1, 90.2]
+    assert [r["predicted_lap_time_sec"] for r in base] == [90.5, 90.6]
+    assert {r["model_run_id"] for r in base} == {44}
+    assert all(set(r) == {"model_run_id", "race_id", "driver_code", "lap_number",
+                          "predicted_lap_time_sec", "origin"} for r in lstm + base)
+
+
 def test_load_env_reads_windows_style_file(tmp_path, monkeypatch):
     from app.db import load_env
     env = tmp_path / ".env"
