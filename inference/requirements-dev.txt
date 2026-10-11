@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest==8.3.5
+# only for scripts/export_model.py and the Keras check in tests
+h5py==3.13.0
+joblib==1.4.2
+scikit-learn==1.6.1
