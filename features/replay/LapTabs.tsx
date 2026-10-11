@@ -317,8 +317,8 @@ function ContextTab({ focus }: { focus: Focus }) {
             FEATURE IMPORTANCE
           </div>
           <div className="mt-1 text-[11.5px] leading-[1.45] text-ink-mute">
-            Permutation importance of the final model (increase in error when a feature is
-            shuffled).
+            Permutation importance of the final LSTM: increase in RMSE (seconds) when a feature
+            group is shuffled across the validation laps.
           </div>
           <div className="mt-2 flex flex-col gap-2">
             {IMPORTANCE.map((item) => (
