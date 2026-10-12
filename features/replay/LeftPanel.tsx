@@ -4,11 +4,12 @@ import { Dropdown } from "@/components/ui/Dropdown";
 import { TeamBar } from "@/components/ui/Swatch";
 import { fmtGap, fmtLap, fmtLapsDown, fmtSigned, hexAlpha, stripGrandPrix } from "@/lib/format";
 import { tyreOf } from "@/lib/race/constants";
+import { PIT_PHASE_LABEL } from "@/lib/race/pit";
 import type { Standing } from "@/lib/race/timeline";
 import { DriverMenu } from "@/features/common/DriverMenu";
 import { useFrame, useRace } from "@/features/dashboard/race-context";
 import { focusOf, type Focus } from "./focus";
-import { LapTabs } from "./LapTabs";
+import { LapLogPanel } from "./LapLogPanel";
 
 const MUTED = "var(--color-ink-mute)";
 const GO = "var(--color-go)";
@@ -60,6 +61,7 @@ function statusLine(x: Standing): [string, string] {
       `Finished P${x.position}${x.lapsDown >= 1 ? ` · ${fmtLapsDown(x.lapsDown)}` : ""}`,
       "var(--color-accent)",
     ];
+  if (x.pit) return [PIT_PHASE_LABEL[x.pit.phase], "var(--color-caution)"];
   if (x.inPit) return ["In the pit lane", "var(--color-caution)"];
   if (ahead && !lapsAhead && (gapAhead ?? 9) < 1) {
     return [`Within 1 s of ${ahead.run.driver_code} — in DRS range`, "var(--color-accent)"];
@@ -387,7 +389,7 @@ export function LeftPanel() {
         leaderCode={frame.leader.run.driver_code}
         runnerUp={frame.standings[1]}
       />
-      <LapTabs x={x} focus={focus} time={frame.time} />
+      <LapLogPanel x={x} focus={focus} time={frame.time} />
     </aside>
   );
 }

@@ -1,26 +1,42 @@
 "use client";
 
 import { useMemo } from "react";
-import { SECTOR_COLORS } from "@/lib/race/constants";
+import { cn } from "@/components/ui/cn";
 import { sectorShares } from "@/lib/race/laps";
 import { cardinal, fmtDate } from "@/lib/format";
 import { geometryFor } from "@/lib/race/track";
 import { TrackPanel } from "@/features/common/TrackPanel";
 import { useFrame, useRace } from "@/features/dashboard/race-context";
+import { CarData } from "./CarData";
 import { focusOf } from "./focus";
-import { ForecastCard } from "./ForecastCard";
+import { ForecastBar, StatusChip } from "./ForecastBar";
 import { LapChart } from "./LapChart";
 import { LeftPanel } from "./LeftPanel";
 import { RightPanel } from "./RightPanel";
 
-function WeatherCell({ value, unit, name }: { value: string; unit: string; name: string }) {
+function WeatherCell({
+  value,
+  unit,
+  name,
+  className,
+}: {
+  value: string;
+  unit: string;
+  name: string;
+  className?: string;
+}) {
   return (
-    <div className="min-w-[92px] border-r border-divider px-4 py-[9px]">
+    <div
+      className={cn(
+        "min-w-0 border-r border-divider px-2 py-1.5 min-[1700px]:px-4 min-[1700px]:py-[9px]",
+        className,
+      )}
+    >
       <div className="flex items-baseline gap-[3px] whitespace-nowrap text-accent">
         <span className="font-cond text-[22px] font-semibold leading-none">{value}</span>
         <span className="text-[11px] font-semibold">{unit}</span>
       </div>
-      <div className="mt-[3px] whitespace-nowrap text-[11.5px] text-ink-mute">{name}</div>
+      <div className="mt-[3px] truncate whitespace-nowrap text-[11.5px] text-ink-mute">{name}</div>
     </div>
   );
 }
@@ -52,11 +68,17 @@ function Hero() {
     },
     { value: lap.pressure?.toFixed(0) ?? "—", unit: "hPa", name: "Pressure" },
     { value: lap.rainfall ? "Yes" : "No", unit: "", name: "Rainfall" },
-    { value: String(x.done ? 0 : timeline.totalLaps - x.currentLap), unit: "laps", name: "To go" },
+    {
+      value: String(x.done ? 0 : timeline.totalLaps - x.currentLap),
+      unit: "laps",
+      name: "To go",
+      // Left out where the weather would not fit one row; the lap chip says the same.
+      className: "max-[1699px]:hidden",
+    },
   ];
 
   return (
-    <section className="relative flex flex-col overflow-hidden rounded-xl border border-line bg-stage wide:min-h-0 wide:flex-[1.7_1_0]">
+    <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-line bg-stage">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -65,59 +87,44 @@ function Hero() {
           backgroundSize: "9px 9px",
         }}
       />
-      <div className="relative flex flex-wrap border-b border-divider bg-[rgba(23,23,26,.94)]">
+      <div className="relative grid grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,1.5fr)] border-b border-divider bg-[rgba(23,23,26,.94)] min-[1700px]:grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,2fr)]">
         {weather.map((cell) => (
           <WeatherCell key={cell.name} {...cell} />
         ))}
-        <div className="ml-auto px-4 py-[9px] text-right">
-          <div className="text-[11.5px] text-ink-mute">Circuit</div>
-          <div className="mt-[3px] text-[13px] font-semibold">
-            {race.circuit.official_name ?? race.circuit.short_name}
+        <div className="min-w-0 px-2 py-1.5 text-right min-[1700px]:px-4 min-[1700px]:py-[9px]">
+          <div className="truncate text-[11.5px] text-ink-mute">
+            {lengthKm ? `${lengthKm.toFixed(3)} km · ` : ""}
+            {timeline.totalLaps} laps
+            <span className="hidden min-[1700px]:inline"> · {fmtDate(race.event_date)}</span>
+          </div>
+          <div className="mt-[3px] truncate text-[13px] font-semibold">
+            <span className="min-[1700px]:hidden">{race.circuit.short_name}</span>
+            <span className="hidden min-[1700px]:inline">
+              {race.circuit.official_name ?? race.circuit.short_name}
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="relative grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto p-3.5 wide:grid-cols-[minmax(250px,272px)_minmax(0,1fr)]">
-        <ForecastCard
-          x={x}
-          focus={focus}
-          time={frame.time}
-          leaderCode={frame.leader.run.driver_code}
-        />
-        <TrackPanel
-          geometry={geometry}
-          sectors={sectors}
-          frame={frame}
-          totalLaps={timeline.totalLaps}
-          highlight={{ [driver.driver_code]: { ring: "#ffffff", glow: "var(--color-accent)" } }}
-          footer={
-            <>
-              {lengthKm && (
-                <span>
-                  <span className="text-ink-mute">Length </span>
-                  {lengthKm.toFixed(3)} km
-                </span>
-              )}
-              <span>
-                <span className="text-ink-mute">Laps </span>
-                {timeline.totalLaps}
-              </span>
-              <span>
-                <span className="text-ink-mute">Race </span>
-                {fmtDate(race.event_date)}
-              </span>
-              <span className="flex items-center gap-2">
-                {["S1", "S2", "S3"].map((name, i) => (
-                  <span key={name} className="flex items-center gap-1">
-                    <span className="h-[3px] w-3" style={{ background: SECTOR_COLORS[i] }} />
-                    {name}
-                  </span>
-                ))}
-              </span>
-            </>
-          }
-        />
+      <div className="relative flex min-h-0 flex-1 p-2.5">
+        <div className="relative min-w-0 flex-1">
+          <TrackPanel
+            geometry={geometry}
+            sectors={sectors}
+            frame={frame}
+            totalLaps={timeline.totalLaps}
+            highlight={{ [driver.driver_code]: { ring: "#ffffff", glow: "var(--color-accent)" } }}
+            topLeft={<StatusChip x={x} totalLaps={timeline.totalLaps} />}
+          />
+        </div>
       </div>
+
+      <ForecastBar
+        x={x}
+        focus={focus}
+        time={frame.time}
+        leaderCode={frame.leader.run.driver_code}
+      />
     </section>
   );
 }
@@ -128,7 +135,15 @@ function CenterColumn() {
   const x = frame.byCode.get(driver.driver_code);
   return (
     <main className="flex min-h-0 min-w-0 flex-col gap-2 [grid-area:main]">
-      <Hero />
+      <div className="flex gap-2 wide:min-h-0 wide:flex-[1.7_1_0]">
+        <Hero />
+        {x && (
+          // Wide screens: car data is a card of its own beside the hero, so the map keeps its height.
+          <aside className="hidden w-[236px] shrink-0 overflow-y-auto rounded-xl border border-line bg-stage p-3 min-[1450px]:flex min-[1450px]:flex-col">
+            <CarData x={x} focus={focusOf(x)} time={frame.time} />
+          </aside>
+        )}
+      </div>
       {x && <LapChart x={x} focus={focusOf(x)} />}
     </main>
   );

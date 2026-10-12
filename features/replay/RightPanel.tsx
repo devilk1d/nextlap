@@ -1,27 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { TyreStrip } from "@/components/ui/TyreStrip";
-import { median } from "@/lib/stats";
 import { tyreOf } from "@/lib/race/constants";
-import type { RunLap, Standing, Timeline } from "@/lib/race/timeline";
+import {
+  compareToReference,
+  PROFILE_METRICS,
+  referenceLaps,
+  type Comparison,
+} from "@/lib/race/lap-profile";
+import type { RunLap, Standing } from "@/lib/race/timeline";
 import { LiveOrder } from "@/features/common/LiveOrder";
 import { useFrame, useRace } from "@/features/dashboard/race-context";
+import { CarData } from "./CarData";
 import { focusOf, type Focus } from "./focus";
+import { LapStats } from "./LapStats";
 
 const num = (value: number | null | undefined, digits = 0, unit = "") =>
   value == null ? "—" : `${value.toFixed(digits)}${unit}`;
-
-function fieldReference(timeline: Timeline) {
-  const laps = timeline.runs.flatMap((run) => run.laps.filter((lap) => lap.clean));
-  const values = (pick: (lap: RunLap) => number | null | undefined) =>
-    laps.map(pick).filter((v): v is number => v != null);
-  return {
-    topSpeed: Math.max(0, ...values((lap) => lap.tel_speed_max)),
-    fullThrottle: median(values((lap) => lap.tel_pct_full_throttle)),
-  };
-}
 
 function Tyres({ x, focus }: { x: Standing; focus: Focus }) {
   const { timeline } = useRace();
@@ -79,67 +76,102 @@ function Tyres({ x, focus }: { x: Standing; focus: Focus }) {
   );
 }
 
-function Telemetry({ focus }: { focus: Focus }) {
-  const { race, timeline } = useRace();
-  const reference = useMemo(() => fieldReference(timeline), [timeline]);
-  const lap = focus.lastLap ?? focus.currentLap;
-  const lengthKm =
-    race.circuit.length_km ?? (race.circ_length_m ? race.circ_length_m / 1000 : null);
+/** On wide screens the car data is a card beside the hero; below that it sits here. */
+const BESIDE_HERO = "min-[1450px]:hidden";
 
-  const stats = [
-    {
-      name: "Top speed",
-      value: num(lap.tel_speed_max),
-      unit: "km/h",
-      sub: `Field best ${num(reference.topSpeed)}`,
-    },
-    {
-      name: "Avg speed",
-      value: num(lap.tel_speed_mean),
-      unit: "km/h",
-      sub: lengthKm ? `${lengthKm.toFixed(3)} km lap` : "",
-    },
-    {
-      name: "Full throttle",
-      value: num(lap.tel_pct_full_throttle),
-      unit: "%",
-      sub: `Field median ${num(reference.fullThrottle)}%`,
-    },
-    { name: "Braking", value: num(lap.tel_pct_braking, 1), unit: "%", sub: "Of lap time" },
-    { name: "Gear shifts", value: num(lap.tel_n_gear_shifts), unit: "", sub: "Per lap" },
-    {
-      name: "DRS open",
-      value: num(lap.tel_pct_drs_open),
-      unit: "%",
-      sub: lap.tel_n_drs_activations
-        ? `${lap.tel_n_drs_activations} activations`
-        : "No activations",
-      accent: !!lap.tel_n_drs_activations,
-    },
-  ];
+const ARROW = { up: "▲", down: "▼", same: "●" } as const;
+
+/** "+6", "−0.4" or "±0": the difference at the precision the value itself is shown in. */
+function deltaText(comparison: Comparison, digits: number): string {
+  if (comparison.direction === "same") return "±0";
+  const sign = comparison.delta > 0 ? "+" : "−";
+  return `${sign}${Math.abs(comparison.delta).toFixed(digits)}`;
+}
+
+/**
+ * The lap aggregates the forecast model reads, folded away until asked for. Each value is set
+ * against the average of the driver's own earlier clean laps, so it can be read as "how unusual
+ * was this lap for this driver". It says nothing about how the model weighs the numbers.
+ */
+function ModelInputs({ x, lap }: { x: Standing; lap: RunLap }) {
+  const [open, setOpen] = useState(false);
+  const panel = useId();
+  const references = referenceLaps(x.run, lap.lap_number);
+  const rows = PROFILE_METRICS.map((metric) => ({
+    metric,
+    value: lap[metric.key] as number | null,
+    comparison: compareToReference(lap[metric.key] as number | null, references, metric),
+  }));
+  const compared = rows.find((row) => row.comparison)?.comparison?.laps ?? 0;
+
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panel}
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-control px-2.5 py-1.5 text-left text-[12px] text-ink-dim hover:bg-raised"
+      >
+        <span>
+          Model inputs · {rows.length} values
+          {open && compared > 0 && (
+            <span className="text-ink-mute"> · vs previous {compared} clean laps</span>
+          )}
+        </span>
+        <span aria-hidden className="text-[10px] text-ink-mute">
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+      {open && (
+        <div id={panel} className="mt-1.5">
+          <p className="mb-1 text-[11px] leading-[1.45] text-ink-mute">
+            What the forecast model reads from the last lap.{" "}
+            {compared > 0
+              ? `▲ ▼ show this lap minus this driver's average over the previous ${compared} clean laps. It shows how unusual the lap was, not how the model weighs it.`
+              : "Not enough earlier clean laps to compare with yet."}
+          </p>
+          {rows.map(({ metric, value, comparison }) => (
+            <div
+              key={metric.key}
+              className="flex items-baseline justify-between gap-2 border-b border-rowline py-1 text-[12px]"
+              title={
+                comparison
+                  ? `Average of the previous ${comparison.laps} clean laps: ${comparison.reference.toFixed(metric.digits)}${metric.unit}`
+                  : undefined
+              }
+            >
+              <span className="text-ink-dim">{metric.name}</span>
+              <span className="flex items-baseline gap-2">
+                <span className="font-mono">{num(value, metric.digits, metric.unit)}</span>
+                <span className="w-[58px] text-right font-mono text-[11px] text-ink-mute">
+                  {comparison ? (
+                    <>
+                      <span className="text-[9px]">{ARROW[comparison.direction]}</span>{" "}
+                      {deltaText(comparison, metric.digits)}
+                    </>
+                  ) : (
+                    ""
+                  )}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Telemetry({ x, focus, time }: { x: Standing; focus: Focus; time: number }) {
+  const lap = focus.lastLap ?? focus.currentLap;
+
   const traps = [
     ["I1", lap.speed_i1],
     ["I2", lap.speed_i2],
     ["FL", lap.speed_fl],
     ["ST", lap.speed_st],
   ] as const;
-  const profile = [
-    ["Min speed", num(lap.tel_speed_min, 0, " km/h")],
-    ["Speed std", num(lap.tel_speed_std, 1, " km/h")],
-    ["Throttle mean", num(lap.tel_throttle_mean, 1, " %")],
-    ["Throttle std", num(lap.tel_throttle_std, 1, " %")],
-    ["Coasting", num(lap.tel_pct_coast, 1, " %")],
-    ["Brake zones", num(lap.tel_n_brake_zones)],
-    ["Gear mode", num(lap.tel_n_gear_mode)],
-    ["Gear mean", num(lap.tel_gear_mean, 2)],
-    ["RPM max", num(lap.tel_rpm_max)],
-    ["RPM mean", num(lap.tel_rpm_mean)],
-    ["RPM std", num(lap.tel_rpm_std)],
-    ["Time < 150 km/h", num(lap.tel_pct_slow, 1, " %")],
-    ["Time > 250 km/h", num(lap.tel_pct_fast, 1, " %")],
-    ["Accel p99", num(lap.tel_accel_p99, 1, " m/s²")],
-    ["Decel p1", num(lap.tel_decel_p01, 1, " m/s²")],
-  ];
 
   return (
     <Card
@@ -148,26 +180,10 @@ function Telemetry({ focus }: { focus: Focus }) {
       className="flex-[1_0_auto]"
       bodyClassName="flex flex-col gap-3 pb-3.5"
     >
-      <div className="grid grid-cols-2 overflow-hidden rounded-[10px] border border-hairline">
-        {stats.map((stat) => (
-          <div
-            key={stat.name}
-            className="-mb-px -mr-px border-b border-r border-hairline px-2.5 py-2"
-          >
-            <div className="text-[11.5px] text-ink-mute">{stat.name}</div>
-            <div className="mt-0.5 whitespace-nowrap font-cond text-[20px] font-semibold">
-              {stat.value}
-              <span className="text-[11px] text-ink-mute"> {stat.unit}</span>
-            </div>
-            <div
-              className="mt-px whitespace-nowrap text-[11px]"
-              style={{ color: stat.accent ? "var(--color-accent)" : "var(--color-ink-mute)" }}
-            >
-              {stat.sub}
-            </div>
-          </div>
-        ))}
+      <div className={BESIDE_HERO}>
+        <CarData x={x} focus={focus} time={time} />
       </div>
+      <LapStats focus={focus} />
       <div>
         <div className="text-[11.5px] text-ink-mute">Speed traps · km/h</div>
         <div className="mt-1.5 grid grid-cols-4 gap-1">
@@ -179,18 +195,7 @@ function Telemetry({ focus }: { focus: Focus }) {
           ))}
         </div>
       </div>
-      <div>
-        <div className="mb-1 text-[11.5px] text-ink-mute">Lap profile</div>
-        {profile.map(([name, value]) => (
-          <div
-            key={name}
-            className="flex justify-between gap-2 border-b border-rowline py-1 text-[12px]"
-          >
-            <span className="text-ink-dim">{name}</span>
-            <span className="font-mono">{value}</span>
-          </div>
-        ))}
-      </div>
+      <ModelInputs x={x} lap={lap} />
     </Card>
   );
 }
@@ -210,7 +215,7 @@ export function RightPanel() {
         onPick={setDriver}
       />
       <Tyres x={x} focus={focus} />
-      <Telemetry focus={focus} />
+      <Telemetry x={x} focus={focus} time={frame.time} />
     </aside>
   );
 }

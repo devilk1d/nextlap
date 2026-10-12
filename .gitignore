@@ -44,3 +44,7 @@ next-env.d.ts
 # local copy of the notebook results (model_final.keras etc.)
 /experiment_results_v7
 !.env.example
+
+# Telemetry pipeline: its venv and the generated per-driver files (rebuild with scripts/telemetry)
+scripts/telemetry/.venv/
+public/telemetry/

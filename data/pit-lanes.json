@@ -1,0 +1,202 @@
+{
+ "austin": {
+  "entry": 0.0035,
+  "exit": 0.0838,
+  "driveS": 21.7,
+  "kmh": 80,
+  "lengthM": 481,
+  "stops": 104
+ },
+ "baku": {
+  "entry": 0.004,
+  "exit": 0.063,
+  "driveS": 18.1,
+  "kmh": 80,
+  "lengthM": 402,
+  "stops": 57
+ },
+ "catalunya": {
+  "entry": 0.0114,
+  "exit": 0.0831,
+  "driveS": 19.8,
+  "kmh": 80,
+  "lengthM": 440,
+  "stops": 178
+ },
+ "hungaroring": {
+  "entry": 0.0076,
+  "exit": 0.0898,
+  "driveS": 19.2,
+  "kmh": 80,
+  "lengthM": 427,
+  "stops": 145
+ },
+ "imola": {
+  "entry": 0.0181,
+  "exit": 0.1074,
+  "driveS": 27.7,
+  "kmh": 80,
+  "lengthM": 616,
+  "stops": 63
+ },
+ "interlagos": {
+  "entry": 0.0133,
+  "exit": 0.0959,
+  "driveS": 21.2,
+  "kmh": 80,
+  "lengthM": 470,
+  "stops": 108
+ },
+ "jeddah": {
+  "entry": 0.003,
+  "exit": 0.0627,
+  "driveS": 18.3,
+  "kmh": 80,
+  "lengthM": 406,
+  "stops": 36
+ },
+ "las vegas": {
+  "entry": 0.008,
+  "exit": 0.0595,
+  "driveS": 18.8,
+  "kmh": 80,
+  "lengthM": 419,
+  "stops": 71
+ },
+ "lusail": {
+  "entry": 0.0151,
+  "exit": 0.0907,
+  "driveS": 25.8,
+  "kmh": 80,
+  "lengthM": 573,
+  "stops": 80
+ },
+ "melbourne": {
+  "entry": 0.0433,
+  "exit": 0.0056,
+  "driveS": 15.5,
+  "kmh": 60,
+  "lengthM": 258,
+  "stops": 54
+ },
+ "mexico city": {
+  "entry": 0.012,
+  "exit": 0.0923,
+  "driveS": 20.2,
+  "kmh": 80,
+  "lengthM": 449,
+  "stops": 87
+ },
+ "miami": {
+  "entry": 0.0171,
+  "exit": 0.0548,
+  "driveS": 17.5,
+  "kmh": 80,
+  "lengthM": 389,
+  "stops": 57
+ },
+ "monte carlo": {
+  "entry": 0.1061,
+  "exit": 0.0033,
+  "driveS": 21.9,
+  "kmh": 60,
+  "lengthM": 365,
+  "stops": 109
+ },
+ "montreal": {
+  "entry": 0.1014,
+  "exit": 0.0071,
+  "driveS": 21.3,
+  "kmh": 80,
+  "lengthM": 473,
+  "stops": 80
+ },
+ "monza": {
+  "entry": 0.0129,
+  "exit": 0.0713,
+  "driveS": 21.9,
+  "kmh": 80,
+  "lengthM": 488,
+  "stops": 93
+ },
+ "paul ricard": {
+  "entry": 0.1075,
+  "exit": 0.0222,
+  "driveS": 34.1,
+  "kmh": 80,
+  "lengthM": 757,
+  "stops": 9
+ },
+ "sakhir": {
+  "entry": 0.0063,
+  "exit": 0.0855,
+  "driveS": 22.4,
+  "kmh": 80,
+  "lengthM": 497,
+  "stops": 158
+ },
+ "shanghai": {
+  "entry": 0.0061,
+  "exit": 0.0767,
+  "driveS": 20.3,
+  "kmh": 80,
+  "lengthM": 451,
+  "stops": 47
+ },
+ "silverstone": {
+  "entry": 0.0202,
+  "exit": 0.0797,
+  "driveS": 26.5,
+  "kmh": 80,
+  "lengthM": 588,
+  "stops": 103
+ },
+ "singapore": {
+  "entry": 0.0256,
+  "exit": 0.0732,
+  "driveS": 22.0,
+  "kmh": 80,
+  "lengthM": 488,
+  "stops": 61
+ },
+ "spa": {
+  "entry": 0.0105,
+  "exit": 0.0551,
+  "driveS": 20.7,
+  "kmh": 80,
+  "lengthM": 460,
+  "stops": 133
+ },
+ "spielberg": {
+  "entry": 0.0149,
+  "exit": 0.084,
+  "driveS": 19.2,
+  "kmh": 80,
+  "lengthM": 427,
+  "stops": 142
+ },
+ "suzuka": {
+  "entry": 0.0042,
+  "exit": 0.0761,
+  "driveS": 21.0,
+  "kmh": 80,
+  "lengthM": 467,
+  "stops": 111
+ },
+ "yas marina circuit": {
+  "entry": 0.0038,
+  "exit": 0.078,
+  "driveS": 19.4,
+  "kmh": 80,
+  "lengthM": 432,
+  "stops": 122
+ },
+ "zandvoort": {
+  "entry": 0.0062,
+  "exit": 0.0793,
+  "driveS": 16.4,
+  "kmh": 80,
+  "lengthM": 364,
+  "stops": 74
+ }
+}

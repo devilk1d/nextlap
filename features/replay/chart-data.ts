@@ -1,6 +1,5 @@
 import { isNeutralised } from "@/lib/race/laps";
 import type { LapFlag, Standing } from "@/lib/race/timeline";
-import type { Focus } from "./focus";
 
 export type ChartLap = {
   lap: number;
@@ -15,17 +14,19 @@ export type ChartLap = {
   shown: boolean;
 };
 
-export type StintChart = {
+export type LapChartData = {
   laps: ChartLap[];
   yMin: number;
   yMax: number;
 };
 
-/** Lap-time series of the focused driver's current stint, with the visible y range. */
-export function stintChart(x: Standing, focus: Focus): StintChart {
+/** First and last lap number shown (inclusive): a stint, or the whole race. */
+export type LapRange = { start: number; end: number };
+
+/** Lap-time series of the focused driver over `range`, with the visible y range. */
+export function lapChart(x: Standing, range: LapRange): LapChartData {
   const { run, completed, currentLap } = x;
-  const { stint } = focus;
-  const laps = run.laps.slice(stint.start - 1, stint.end).map<ChartLap>((lap) => ({
+  const laps = run.laps.slice(range.start - 1, range.end).map<ChartLap>((lap) => ({
     lap: lap.lap_number,
     time: lap.lap_time_sec,
     flag: lap.flag,

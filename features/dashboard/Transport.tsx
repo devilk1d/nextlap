@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Segmented } from "@/components/ui/Segmented";
 import { fmtClock } from "@/lib/format";
 import { REPLAY_SPEEDS } from "@/lib/race/constants";
@@ -10,18 +11,69 @@ import { useReplay } from "@/features/replay/store";
 const STEP_BUTTON =
   "size-9 cursor-pointer rounded-lg border border-control bg-raised text-[11px] text-ink-soft";
 
+/** Seconds skipped by Shift + arrow. */
+const SKIP_SECONDS = 10;
+
+/**
+ * Keyboard control of the replay: Space plays or pauses, ← / → jump a lap (Shift: 10 s), and
+ * 1–6 pick the speed. Typing in a field is left alone, and arrow keys keep moving the scrubber
+ * while it has focus.
+ */
+function useTransportKeys(run: Run) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const onScrubber = tag === "INPUT" && (target as HTMLInputElement).type === "range";
+      const typing =
+        target?.isContentEditable ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        (tag === "INPUT" && !onScrubber);
+      if (typing) return;
+
+      const replay = useReplay.getState();
+      if (event.key === " ") {
+        event.preventDefault();
+        // A focused button would also react to the space bar on key-up and toggle twice.
+        if (document.activeElement instanceof HTMLButtonElement) document.activeElement.blur();
+        if (!event.repeat) replay.toggle();
+      } else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+        if (onScrubber) return;
+        event.preventDefault();
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        replay.seek(
+          event.shiftKey
+            ? replay.time + direction * SKIP_SECONDS
+            : lapBoundary(run, replay.time, direction),
+        );
+      } else if (/^[1-9]$/.test(event.key)) {
+        const speed = REPLAY_SPEEDS[Number(event.key) - 1];
+        if (speed !== undefined) {
+          event.preventDefault();
+          replay.setSpeed(speed);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [run]);
+}
+
 /** Play / pause, lap stepping, scrubber and speed for the replay clock. */
 export function Transport({ run }: { run: Run }) {
   const { timeline } = useRace();
   const frame = useFrame();
   const { time, end, speed, playing, seek, toggle, setSpeed } = useReplay();
+  useTransportKeys(run);
 
   return (
     <section className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-line bg-panel px-3 py-2 [grid-area:trans]">
       <div className="flex gap-1">
         <button
           type="button"
-          title="Previous lap"
+          title="Previous lap (←) · Shift + ← goes back 10 s"
           className={STEP_BUTTON}
           onClick={() => seek(lapBoundary(run, time, -1))}
         >
@@ -29,6 +81,7 @@ export function Transport({ run }: { run: Run }) {
         </button>
         <button
           type="button"
+          title={`${playing ? "Pause" : "Play"} (Space)`}
           onClick={toggle}
           className="h-9 min-w-[92px] cursor-pointer whitespace-nowrap rounded-lg border-0 bg-accent px-3.5 text-[12.5px] font-bold tracking-[.04em] text-[#111]"
         >
@@ -36,7 +89,7 @@ export function Transport({ run }: { run: Run }) {
         </button>
         <button
           type="button"
-          title="Next lap"
+          title="Next lap (→) · Shift + → skips 10 s"
           className={STEP_BUTTON}
           onClick={() => seek(lapBoundary(run, time, 1))}
         >
@@ -69,13 +122,14 @@ export function Transport({ run }: { run: Run }) {
           variant="pill"
           value={speed}
           onChange={setSpeed}
-          options={REPLAY_SPEEDS.map((value) => ({
+          options={REPLAY_SPEEDS.map((value, index) => ({
             value,
             label: value === 1 ? "1× real" : `${value}×`,
-            title:
+            title: `${
               value === 1
                 ? "Real time — one lap takes as long as the actual lap"
-                : `${value}× faster than real time`,
+                : `${value}× faster than real time`
+            } (key ${index + 1})`,
           }))}
         />
       </div>

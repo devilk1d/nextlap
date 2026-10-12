@@ -3,7 +3,7 @@ import { fmtLap, fmtLapAxis } from "@/lib/format";
 import { EVENT, tyreOf } from "@/lib/race/constants";
 import { isNeutralised } from "@/lib/race/laps";
 import type { Run } from "@/lib/race/timeline";
-import type { StintChart } from "./chart-data";
+import type { LapChartData } from "./chart-data";
 
 type Context = { run: Run; grandPrix: string; year: number };
 
@@ -44,11 +44,11 @@ export function exportLapsCsv({ run, grandPrix, year }: Context, completed: numb
   downloadCsv(`laps_${run.driver_code}_${slug(grandPrix)}_${year}.csv`, rows);
 }
 
-/** Renders the stint chart (actual vs predicted) to a 1600×760 PNG. */
+/** Renders the lap chart (actual vs predicted) to a 1600×760 PNG; `scope` names the range. */
 export function exportChartPng(
   { run, grandPrix, year }: Context,
-  chart: StintChart,
-  stintNumber: number,
+  chart: LapChartData,
+  scope: string,
 ) {
   const W = 1600;
   const H = 760;
@@ -72,7 +72,7 @@ export function exportChartPng(
   g.fillRect(0, 0, W, H);
   g.font = "600 30px sans-serif";
   g.fillStyle = "#ededee";
-  g.fillText(`${run.driver_code} · ${grandPrix} ${year} · Stint ${stintNumber}`, m.l, 48);
+  g.fillText(`${run.driver_code} · ${grandPrix} ${year} · ${scope}`, m.l, 48);
   g.font = "20px sans-serif";
   g.fillStyle = "#9a9aa3";
   g.fillText("Lap time — actual vs predicted", m.l, 78);
@@ -104,7 +104,7 @@ export function exportChartPng(
   });
 
   const stroke = (
-    pick: (lap: StintChart["laps"][number]) => number | null,
+    pick: (lap: LapChartData["laps"][number]) => number | null,
     color: string,
     dash: number[],
     width: number,
@@ -172,7 +172,7 @@ export function exportChartPng(
   canvas.toBlob((blob) => {
     if (blob) {
       downloadBlob(
-        `laptimes_${run.driver_code}_${slug(grandPrix)}_${year}_stint${stintNumber}.png`,
+        `laptimes_${run.driver_code}_${slug(grandPrix)}_${year}_${slug(scope)}.png`,
         blob,
       );
     }

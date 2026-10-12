@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SECTOR_COLORS } from "@/lib/race/constants";
+import { pitLanePath, pitLanePoint, type PitLaneSpec } from "@/lib/race/pit";
 import { spans } from "@/lib/stats";
 import {
   closedPath,
@@ -18,6 +19,10 @@ type Props = {
   sectors: readonly number[];
   colors?: readonly string[];
   labels?: readonly string[];
+  /** Pit lane drawn beside the start/finish straight, with the timing line on it. */
+  pitLane?: PitLaneSpec | null;
+  /** Pixels kept free at the bottom for an overlay. */
+  bottomInset?: number;
   /** Drawn inside the same SVG (car markers); receives the marker scale and the outline. */
   children?: (scale: number, path: TrackPath) => ReactNode;
 };
@@ -28,10 +33,18 @@ const FIGURE = {
   vectorEffect: "non-scaling-stroke",
 } as const;
 
-/** Circuit outline split into three coloured sectors, with start/finish line and compass. */
-export function TrackMap({ geometry, sectors, colors = SECTOR_COLORS, labels, children }: Props) {
+/** Circuit outline split into three coloured sectors, with start/finish line and pit lane. */
+export function TrackMap({
+  geometry,
+  sectors,
+  colors = SECTOR_COLORS,
+  labels,
+  pitLane = null,
+  bottomInset = 0,
+  children,
+}: Props) {
   const path = trackPath(geometry);
-  const { viewBox, scale: k, rotation } = trackView(geometry);
+  const { viewBox, scale: k } = trackView(geometry);
 
   const parts = spans(sectors).map(({ start, end }, index) => {
     const share = end - start;
@@ -59,7 +72,8 @@ export function TrackMap({ geometry, sectors, colors = SECTOR_COLORS, labels, ch
       <svg
         viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
-        className="absolute inset-0 size-full overflow-visible"
+        className="absolute inset-x-0 top-0 w-full overflow-visible"
+        style={{ height: `calc(100% - ${bottomInset}px)` }}
       >
         <path
           d={closedPath(path)}
@@ -113,6 +127,43 @@ export function TrackMap({ geometry, sectors, colors = SECTOR_COLORS, labels, ch
           fill="#ffffff"
           d={`M${ax + atx * arrow},${ay + aty * arrow}L${ax - atx * arrow * 0.6 + anx * arrow * 0.8},${ay - aty * arrow * 0.6 + any * arrow * 0.8}L${ax - atx * arrow * 0.6 - anx * arrow * 0.8},${ay - aty * arrow * 0.6 - any * arrow * 0.8}Z`}
         />
+        {pitLane && (
+          <>
+            <path
+              d={pitLanePath(path, pitLane, 5 * k)}
+              style={{
+                ...FIGURE,
+                stroke: "#8a8a93",
+                strokeWidth: 3,
+                strokeDasharray: "2 3",
+                strokeLinecap: "round",
+              }}
+            />
+            {(() => {
+              const [px, py] = pitLanePoint(path, pitLane, 0.5, 5 * k);
+              return (
+                <text
+                  x={px}
+                  y={py}
+                  dy={-1.8 * k}
+                  textAnchor="middle"
+                  fontSize={2.6 * k}
+                  fontWeight={700}
+                  fill="#8a8a93"
+                  stroke="#141416"
+                  strokeWidth={1.6}
+                  paintOrder="stroke"
+                  style={{
+                    fontFamily: "var(--font-barlow-condensed), sans-serif",
+                    vectorEffect: "non-scaling-stroke",
+                  }}
+                >
+                  PIT LANE
+                </text>
+              );
+            })()}
+          </>
+        )}
         {parts.map(({ index, label }) => (
           <text
             key={`label${index}`}
@@ -135,30 +186,6 @@ export function TrackMap({ geometry, sectors, colors = SECTOR_COLORS, labels, ch
         ))}
         {children?.(k, path)}
       </svg>
-
-      <div
-        title="North"
-        className="absolute bottom-0 right-0 grid size-[34px] place-items-center rounded-lg border border-overlay bg-[rgba(22,22,25,.92)]"
-      >
-        <svg
-          viewBox="-10 -10 20 20"
-          width={24}
-          height={24}
-          style={{ transform: `rotate(${rotation}deg)` }}
-        >
-          <path d="M0,-3L3.2,6L0,4L-3.2,6Z" fill="var(--color-accent)" />
-          <text
-            x={0}
-            y={-4.5}
-            textAnchor="middle"
-            fontSize={6}
-            fontWeight={700}
-            fill="var(--color-ink)"
-          >
-            N
-          </text>
-        </svg>
-      </div>
     </div>
   );
 }

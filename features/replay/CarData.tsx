@@ -1,0 +1,257 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { RollingText } from "@/components/ui/RollingText";
+import { cn } from "@/components/ui/cn";
+import { fmtTimer } from "@/lib/format";
+import { sampleTelemetry } from "@/lib/race/telemetry";
+import type { Standing } from "@/lib/race/timeline";
+import { useRace } from "@/features/dashboard/race-context";
+import type { Focus } from "./focus";
+import { useDriverTelemetry } from "./useTelemetry";
+
+type Props = {
+  x: Standing;
+  focus: Focus;
+  /** Replay clock, race seconds. */
+  time: number;
+};
+
+const SPEED_MAX = 360;
+const SPEED_COLOR = "#2b6bff";
+const THROTTLE_COLOR = "var(--color-go)";
+const BRAKE_COLOR = "var(--color-stop)";
+
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+const whole = (value: number | null | undefined) => (value == null ? "—" : String(Math.round(value)));
+
+/** The fill and the mark of a bar share one transition, so the mark can never drift off its fill. */
+const sweep = (live: boolean, property: "width" | "left" | "height") =>
+  `${property} ${live ? "90ms linear" : "600ms cubic-bezier(.2,.8,.2,1)"}`;
+
+/** A number that rolls when it changes, or plain when it follows a live feed. */
+function Figure({ value, live, className }: { value: string; live: boolean; className?: string }) {
+  return live ? (
+    <span className={cn("inline-block tabular-nums", className)}>{value}</span>
+  ) : (
+    <RollingText value={value} className={className} />
+  );
+}
+
+/** A bar filled to `share` (0..1), with an optional white mark at `mark` (0..1). */
+function Meter({
+  share,
+  color,
+  mark,
+  live,
+}: {
+  share: number;
+  color: string;
+  mark?: number;
+  live: boolean;
+}) {
+  return (
+    <div className="relative h-[6px] rounded-full bg-divider">
+      <div
+        className="h-full rounded-full"
+        style={{
+          width: `${clamp01(share) * 100}%`,
+          background: color,
+          transition: sweep(live, "width"),
+        }}
+      />
+      {mark !== undefined && (
+        <div
+          className="absolute -top-[3px] h-[12px] w-[2px] rounded-full bg-white"
+          style={{ left: `calc(${clamp01(mark) * 100}% - 1px)`, transition: sweep(live, "left") }}
+        />
+      )}
+    </div>
+  );
+}
+
+const LABEL = "whitespace-nowrap text-[11px] leading-none text-ink-mute";
+const FIGURE = "font-cond font-semibold leading-none";
+
+/**
+ * A pedal as a tall column that fills from the bottom, like the pedal itself, with its name and
+ * value under it. The column takes whatever height the card has left.
+ */
+function PedalColumn({
+  name,
+  value,
+  unit,
+  valueColor,
+  color,
+  share,
+  live,
+}: {
+  name: string;
+  value: ReactNode;
+  unit?: string;
+  valueColor?: string;
+  color: string;
+  share: number;
+  live: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="relative min-h-[56px] flex-1 overflow-hidden rounded-lg bg-divider">
+        <div
+          className="absolute inset-x-0 bottom-0"
+          style={{
+            height: `${clamp01(share) * 100}%`,
+            background: color,
+            transition: sweep(live, "height"),
+          }}
+        />
+      </div>
+      <div className="flex items-baseline justify-between gap-1">
+        <span className={LABEL}>{name}</span>
+        <span className="flex items-baseline gap-0.5" style={{ color: valueColor }}>
+          {value}
+          {unit && <span className="text-[11px] font-semibold text-ink-mute">{unit}</span>}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Car data for the focused driver, as a vertical card: speed with the top-speed mark, RPM,
+ * throttle and brake bars, DRS and gear. It follows the replay clock when the race has a
+ * telemetry file, and shows the averages of the last lap otherwise.
+ */
+export function CarData({ x, focus, time }: Props) {
+  const { race } = useRace();
+  const file = useDriverTelemetry(race.year, race.event_name, x.run.driver_code);
+  const elapsed = time - x.run.cum[x.currentLap - 1];
+  const sample =
+    file && !x.done && !x.retired ? sampleTelemetry(file, x.currentLap, elapsed) : null;
+  const live = sample !== null;
+  const lap = focus.lastLap ?? focus.currentLap;
+  const surname = (x.run.name.split(" ").at(-1) ?? x.run.name).toUpperCase();
+
+  const speed = sample ? sample.speed : (lap.tel_speed_mean ?? null);
+  const topSpeed = sample ? sample.topSpeed : (lap.tel_speed_max ?? null);
+  const throttle = sample ? sample.throttle : (lap.tel_throttle_mean ?? null);
+  const brakeShare = sample ? (sample.brake ? 1 : 0) : (lap.tel_pct_braking ?? 0) / 100;
+  const rpm = sample ? sample.rpm : (lap.tel_rpm_mean ?? null);
+  const gear = sample ? sample.gear : (lap.tel_n_gear_mode ?? null);
+  const drs = sample ? sample.drs : (lap.tel_pct_drs_open ?? 0) > 0;
+
+  const caption = live
+    ? "Live car data · white mark = top speed so far in the lap"
+    : "Lap averages · white mark = top speed of the lap · no live data for this race";
+
+  return (
+    <div title={caption} className="flex min-h-0 flex-1 flex-col gap-3.5">
+      <div className="flex items-center gap-2.5">
+        <span className="h-8 w-[3px] shrink-0 rounded-sm" style={{ background: x.run.color }} />
+        <div className="min-w-0 leading-tight">
+          <div className="truncate text-[15px] font-bold tracking-[.02em]">{surname}</div>
+          <div className="truncate text-[12px] text-ink-mute">{x.run.team}</div>
+        </div>
+        <span
+          className="ml-auto whitespace-nowrap rounded-md border border-control bg-raised px-2 py-[3px] font-mono text-[11.5px] font-semibold"
+          title={live ? "Lap in progress" : "Averages of the last completed lap"}
+        >
+          {live ? (
+            <>
+              <span className="text-go">●</span> L{x.currentLap} · {fmtTimer(Math.max(0, elapsed))}
+            </>
+          ) : (
+            `L${lap.lap_number} avg`
+          )}
+        </span>
+      </div>
+
+      <div>
+        <div className={cn(LABEL, "flex justify-between")}>
+          <span>Speed</span>
+          <span className="font-mono text-[10.5px]">Top {whole(topSpeed)}</span>
+        </div>
+        <div className="mb-2 mt-1.5 flex items-end justify-between gap-2">
+          <span className="flex items-baseline gap-1.5">
+            <Figure live={live} value={whole(speed)} className={cn(FIGURE, "text-[48px]")} />
+            <span className="text-[11px] font-semibold tracking-[.08em] text-ink-mute">KMH</span>
+          </span>
+          <span className="flex flex-col items-end gap-0.5">
+            <Figure live={live} value={whole(rpm)} className={cn(FIGURE, "text-[20px]")} />
+            <span className="text-[10px] font-semibold leading-none tracking-[.08em] text-ink-mute">
+              RPM
+            </span>
+          </span>
+        </div>
+        <Meter
+          live={live}
+          color={SPEED_COLOR}
+          share={(speed ?? 0) / SPEED_MAX}
+          mark={topSpeed == null ? undefined : topSpeed / SPEED_MAX}
+        />
+      </div>
+
+      <div className="flex min-h-[104px] flex-1 gap-3">
+        <PedalColumn
+          name="Throttle"
+          unit="%"
+          color={THROTTLE_COLOR}
+          share={(throttle ?? 0) / 100}
+          live={live}
+          value={
+            <Figure live={live} value={whole(throttle)} className={cn(FIGURE, "text-[20px]")} />
+          }
+        />
+        <PedalColumn
+          name={live ? "Brake" : "Braking"}
+          unit={live ? undefined : "%"}
+          color={BRAKE_COLOR}
+          share={brakeShare}
+          live={live}
+          valueColor={live && brakeShare ? BRAKE_COLOR : undefined}
+          value={
+            live ? (
+              <span className={cn(FIGURE, "text-[20px]")}>{brakeShare ? "ON" : "OFF"}</span>
+            ) : (
+              <Figure
+                live={false}
+                value={lap.tel_pct_braking == null ? "—" : lap.tel_pct_braking.toFixed(1)}
+                className={cn(FIGURE, "text-[20px]")}
+              />
+            )
+          }
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span
+          title={
+            live
+              ? drs
+                ? "DRS open"
+                : "DRS closed"
+              : `DRS was open for ${(lap.tel_pct_drs_open ?? 0).toFixed(1)}% of the lap`
+          }
+          className="inline-flex h-[28px] items-center rounded-md px-3 text-[12px] font-bold tracking-[.04em]"
+          style={{
+            background: drs ? THROTTLE_COLOR : "var(--color-control)",
+            color: drs ? "#0b2414" : "var(--color-ink-faint)",
+          }}
+        >
+          DRS
+        </span>
+        <span
+          title={live ? "Current gear" : "Most used gear on the lap"}
+          className="flex items-baseline gap-2"
+        >
+          <span className="text-[11px] font-semibold tracking-[.1em] text-ink-mute">GEAR</span>
+          <Figure
+            live={live}
+            value={gear == null ? "—" : String(gear)}
+            className={cn(FIGURE, "text-[30px]")}
+          />
+        </span>
+      </div>
+    </div>
+  );
+}

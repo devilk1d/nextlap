@@ -4,23 +4,39 @@
     python scripts/build_track_geometry.py --all      # rebuild every circuit
 
 Source: https://github.com/bacinger/f1-circuits (GeoJSON, © Tomislav Bacinger, MIT).
-The 10 study-circuit outlines already in the file were made from the same source; this script
-reproduces that format: 320 points evenly spaced along the lap, starting at the start/finish
-line in the direction of travel, SVG axes (y down), rotated by `rot` degrees and scaled to
-width 100. `rot` is also used by the map's north arrow. For new circuits it is the rotation
-that gives the widest (landscape) layout; edit it by hand if you prefer the TV orientation.
+Format: 320 points evenly spaced along the lap, starting at the start/finish line in the
+direction of travel, SVG axes (y down), rotated by `rot` degrees and scaled to width 100.
+`rot` is also used by the map's north arrow.
+
+Orientation and start/finish line come from the official F1 circuit data served by MultiViewer
+(https://api.multiviewer.app, the same data FastF1 uses for `circuit_info.rotation`): its
+position-data outline starts at the timing line and is rotated by an official angle so it matches
+the F1 circuit maps. Only the angle and the start point are taken from it, never its coordinates:
+the outline is rotated until it overlays the official one (smallest chamfer distance) and the lap
+is started at the official start/finish line. Without network access the stored `rot` is kept.
 """
 
 import json
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
 import numpy as np
 
 SOURCE = "https://raw.githubusercontent.com/bacinger/f1-circuits/master/f1-circuits.geojson"
+MULTIVIEWER = "https://api.multiviewer.app/api/v1/circuits/{key}/{year}"
 OUT = Path(__file__).resolve().parent.parent / "data" / "track-geometry.json"
 N_POINTS = 320
+FINE_POINTS = 4000
+# F1 live-timing circuit keys (circuits.circuit_key in the database).
+F1_KEYS = {
+    "silverstone": 2, "hungaroring": 4, "imola": 6, "spa": 7, "austin": 9, "melbourne": 10,
+    "interlagos": 14, "catalunya": 15, "spielberg": 19, "monte carlo": 22, "montreal": 23,
+    "paul ricard": 28, "monza": 39, "suzuka": 46, "shanghai": 49, "zandvoort": 55,
+    "singapore": 61, "sakhir": 63, "mexico city": 65, "yas marina circuit": 70, "baku": 144,
+    "jeddah": 149, "lusail": 150, "miami": 151, "las vegas": 152,
+}
 
 # Dataset CircuitShortName (lower case, as used by lib/race/track.ts) → bacinger id.
 CIRCUITS = {
@@ -61,10 +77,60 @@ def project(svg, rot):
     return q * (100 / q[:, 0].max())
 
 
-def outline(coords, reverse, rot=None):
+def official_outline(f1_key):
+    """Official F1 outline in SVG axes (y down), rotated to the official map orientation."""
+    for year in (2025, 2024, 2023, 2022):
+        for _ in range(3):
+            try:
+                req = urllib.request.Request(MULTIVIEWER.format(key=f1_key, year=year),
+                                             headers={"User-Agent": "nextlap-thesis-build/1.0"})
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    data = json.load(resp)
+                if data.get("x"):
+                    a = np.deg2rad(data["rotation"])
+                    x, y = np.asarray(data["x"], float), np.asarray(data["y"], float)
+                    return np.c_[x * np.cos(a) - y * np.sin(a), x * np.sin(a) + y * np.cos(a)] * [1, -1]
+                break
+            except Exception:  # noqa: BLE001 - retry, then try the previous season
+                time.sleep(2)
+    return None
+
+
+def normalise(p):
+    p = p - p.mean(axis=0)
+    return p / np.sqrt((p ** 2).sum(axis=1).mean())
+
+
+def rotate(p, deg):
+    a = np.deg2rad(deg)
+    return p @ np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]]).T
+
+
+def chamfer(a, b):
+    d = np.linalg.norm(a[:, None, :] - b[None, :, :], axis=2)
+    return float((d.min(axis=1).mean() + d.min(axis=0).mean()) / 2)
+
+
+def align_to_official(fine, official):
+    """Rotation (degrees) that overlays `fine` on the official outline, and the index in `fine`
+    of the official start/finish line."""
+    target = normalise(resample(official, 400))
+    probe = normalise(fine[:: max(1, len(fine) // 400)])
+    rot = min(range(360), key=lambda r: chamfer(normalise(rotate(probe, r)), target))
+    aligned = normalise(rotate(fine, rot))
+    start = int(np.linalg.norm(aligned - normalise(official)[0], axis=1).argmin())
+    return rot, start
+
+
+def outline(coords, reverse, rot=None, official=None):
     p = local_metres(coords)
     if reverse:
         p = p[::-1]
+    start = 0
+    if official is not None:
+        fine = resample(p, FINE_POINTS) * [1, -1]
+        rot, start = align_to_official(fine, official)
+        p = np.roll(fine * [1, -1], -start, axis=0)
     svg = resample(p, N_POINTS) * [1, -1]
     if rot is None:
         rot = min(range(180), key=lambda r: project(svg, r)[:, 1].max())
@@ -80,7 +146,10 @@ def main(rebuild_all: bool) -> None:
         if key in current and not rebuild_all:
             continue
         keep_rot = current.get(key, {}).get("rot")
-        current[key] = outline(features[gid]["geometry"]["coordinates"], key in REVERSED, keep_rot)
+        official = official_outline(F1_KEYS[key])
+        if official is None:
+            print(f"{key:<20} no official data: keeping rot={keep_rot}")
+        current[key] = outline(features[gid]["geometry"]["coordinates"], key in REVERSED, keep_rot, official)
         print(f"{key:<20} rot={current[key]['rot']:>3} h={current[key]['h']}")
     OUT.write_text(json.dumps(current, separators=(",", ":")))
 

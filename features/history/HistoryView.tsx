@@ -70,7 +70,7 @@ export function HistoryView({ race, races, onOpenRace }: Props) {
                 />
               ) : (
                 <div className="grid h-full place-items-center text-[12px] text-ink-mute">
-                  Track outline is available for the ten study circuits.
+                  No track outline is available for this circuit.
                 </div>
               )}
             </div>
