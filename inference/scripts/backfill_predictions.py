@@ -19,11 +19,20 @@ import os
 import httpx
 import pandas as pd
 
-from app.db import Database
+from app.db import Database, load_env
 from app.model import LapTimeModel
 from app.service import Predictor, metrics
 
-RUN_NAME = "final:LSTM:E"
+# model_runs name → column of the computed frame that holds its prediction.
+# The Mean-3 baseline gets the same origin labels as the LSTM rows, because the website matches
+# baseline and model per origin when it computes "RMSE vs Mean-3".
+RUNS = {"final:LSTM:E": "predicted_lap_time_sec", "final:Mean-3": "mean3_sec"}
+
+
+def prediction_rows(frame: pd.DataFrame, run_id: int, column: str) -> list[dict]:
+    rows = frame.assign(model_run_id=run_id, predicted_lap_time_sec=frame[column])[
+        ["model_run_id", "race_id", "driver_code", "lap_number", "predicted_lap_time_sec", "origin"]]
+    return rows.to_dict("records")
 
 
 def main() -> None:
@@ -31,6 +40,7 @@ def main() -> None:
     parser.add_argument("--write", action="store_true", help="upsert into lap_predictions")
     parser.add_argument("--out", default="predictions_final.csv")
     args = parser.parse_args()
+    load_env()
 
     predictor = Predictor(LapTimeModel.load(), Database(), cache_size=1)
     frames = []
@@ -54,16 +64,15 @@ def main() -> None:
     key = os.environ["SUPABASE_SECRET_KEY"]
     rest = httpx.Client(base_url=f"{os.environ['SUPABASE_URL'].rstrip('/')}/rest/v1", timeout=60,
                         headers={"apikey": key, "Authorization": f"Bearer {key}"})
-    run = rest.get("/model_runs", params={"select": "id", "name": f"eq.{RUN_NAME}"}).raise_for_status().json()
-    if not run:
-        raise SystemExit(f"model_runs row '{RUN_NAME}' not found")
-    rows = allp.assign(model_run_id=run[0]["id"])[
-        ["model_run_id", "race_id", "driver_code", "lap_number", "predicted_lap_time_sec", "origin"]]
-    records = rows.to_dict("records")
-    for i in range(0, len(records), 2000):
-        rest.post("/lap_predictions", json=records[i:i + 2000],
-                  headers={"Prefer": "resolution=merge-duplicates,return=minimal"}).raise_for_status()
-    print(f"upserted {len(records):,} rows for model_run_id={run[0]['id']}")
+    for run_name, column in RUNS.items():
+        run = rest.get("/model_runs", params={"select": "id", "name": f"eq.{run_name}"}).raise_for_status().json()
+        if not run:
+            raise SystemExit(f"model_runs row '{run_name}' not found")
+        records = prediction_rows(allp, run[0]["id"], column)
+        for i in range(0, len(records), 2000):
+            rest.post("/lap_predictions", json=records[i:i + 2000],
+                      headers={"Prefer": "resolution=merge-duplicates,return=minimal"}).raise_for_status()
+        print(f"upserted {len(records):,} rows for {run_name} (model_run_id={run[0]['id']})")
 
 
 if __name__ == "__main__":

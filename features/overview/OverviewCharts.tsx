@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { LineChart, type Band, type Series } from "@/components/charts/LineChart";
 import { Plot } from "@/components/charts/Plot";
-import { Select } from "@/components/ui/Select";
 import { fmtLap, fmtLapAxis } from "@/lib/format";
 import { EVENT } from "@/lib/race/constants";
 import type { EventBand } from "@/lib/race/events";
 import type { Run, RunLap, Timeline } from "@/lib/race/timeline";
 import { quantileSorted } from "@/lib/stats";
 import type { DriverRow } from "./analysis";
-import { formatMetric, LAP_METRICS, METRIC_GROUPS } from "./metrics";
 
 type Common = {
   timeline: Timeline;
@@ -78,7 +75,7 @@ export function PositionChart(props: Common) {
       yMin={0.5}
       yMax={rows.length + 0.5}
       invert
-      height={260}
+      height={215}
       yFormat={(v) => `P${v}`}
       yTicks={[1, 5, 10, 15, 20].filter((v) => v <= rows.length)}
       bands={bands}
@@ -102,72 +99,11 @@ export function GapToLeaderChart(props: Common) {
       yMin={0}
       yMax={peak * 1.05}
       invert
-      height={260}
+      height={215}
       yFormat={(v) => `+${v.toFixed(0)}s`}
       tipFormat={(v) => (v < 0.0005 ? "Leader" : `+${v.toFixed(3)} s`)}
       bands={bands}
     />
-  );
-}
-
-export function MetricExplorer(props: Common) {
-  const { timeline, bands } = props;
-  const [key, setKey] = useState("lap_time");
-  const [includeAll, setIncludeAll] = useState(false);
-  const metric = LAP_METRICS.find((m) => m.key === key) ?? LAP_METRICS[0];
-  const racingOnly = metric.racingOnly && !includeAll;
-
-  const read = (lap: RunLap | undefined) => {
-    if (!lap || (racingOnly && !lap.clean)) return null;
-    const value = metric.value(lap);
-    return value == null || !Number.isFinite(value) ? null : value;
-  };
-  const data = series(props, (run, lap) => read(run.laps[lap - 1]));
-  const values = data
-    .flatMap((s) => s.points.map((p) => p.y))
-    .filter((v): v is number => v !== null);
-  const lo = values.length ? Math.min(...values) : 0;
-  const hi = values.length ? Math.max(...values) : 1;
-  const pad = (hi - lo) * 0.08 || 1;
-
-  return (
-    <div>
-      <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
-        <Select
-          value={key}
-          onChange={setKey}
-          maxWidth={260}
-          options={METRIC_GROUPS.flatMap((group) =>
-            LAP_METRICS.filter((m) => m.group === group).map((m) => ({
-              value: m.key,
-              label: m.label + (m.unit ? ` (${m.unit})` : ""),
-              group,
-            })),
-          )}
-        />
-        <label className="flex cursor-pointer items-center gap-1.5 text-[11.5px] text-ink-dim">
-          <input
-            type="checkbox"
-            checked={includeAll}
-            onChange={() => setIncludeAll((value) => !value)}
-            className="accent-accent"
-          />
-          Include pit / start / flag laps
-        </label>
-      </div>
-      <LineChart
-        series={data}
-        xMin={1}
-        xMax={timeline.totalLaps}
-        yMin={lo - pad}
-        yMax={hi + pad}
-        invert={metric.key === "position"}
-        height={250}
-        yFormat={metric.axis ?? ((v) => v.toFixed(Math.max(0, metric.digits - 1)))}
-        tipFormat={(v) => formatMetric(metric, v)}
-        bands={bands}
-      />
-    </div>
   );
 }
 
@@ -196,7 +132,7 @@ export function LapTimeBoxPlot({ rows }: { rows: DriverRow[] }) {
 
   return (
     <Plot
-      height={240}
+      height={215}
       yMin={yMin}
       yMax={yMax}
       yFormat={fmtLapAxis}
@@ -267,7 +203,7 @@ export function WeatherCharts({ timeline, rows, bands }: Common) {
           xMax={timeline.totalLaps}
           yMin={lo - pad}
           yMax={hi + pad}
-          height={120}
+          height={76}
           yFormat={(v) => v.toFixed(digits)}
           bands={bands}
         />
@@ -275,7 +211,7 @@ export function WeatherCharts({ timeline, rows, bands }: Common) {
     );
   };
   return (
-    <div className="grid grid-cols-1 gap-3 wide:grid-cols-2">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
       {chart(
         "Temperature · °C",
         [

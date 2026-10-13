@@ -3,6 +3,15 @@ import type { Car, Lap, RaceDetail } from "@/server/races/types";
 import { clamp, present } from "@/lib/stats";
 import { NEUTRAL_COLOR } from "./constants";
 import { flagOf, isCleanLap, type LapFlag } from "./lap-flags";
+import {
+  pitAt,
+  pitLaneFor,
+  pitStopsOf,
+  type CarMarker,
+  type PitLaneSpec,
+  type PitState,
+  type PitStop,
+} from "./pit";
 
 export type { LapFlag };
 
@@ -31,6 +40,8 @@ export type Run = Omit<Car, "laps"> & {
   /** Seconds since the start: cum[0] = 0, cum[n] = end of lap n. */
   cum: number[];
   stints: Stint[];
+  /** Pit stops with the recorded entry, timing-line and exit times, in race seconds. */
+  stops: PitStop[];
 };
 
 export type Timeline = {
@@ -39,6 +50,8 @@ export type Timeline = {
   totalLaps: number;
   /** Seconds until the last car has finished. */
   end: number;
+  /** Pit lane of the circuit, null when no stops were recorded there. */
+  pitLane: PitLaneSpec | null;
 };
 
 function buildStints(laps: Lap[]): { stints: Stint[]; indexOfLap: number[] } {
@@ -91,6 +104,7 @@ function buildRun(car: Car, raceStart: number): Run {
     laps,
     cum,
     stints,
+    stops: pitStopsOf(laps, cum, raceStart),
   };
 }
 
@@ -106,6 +120,7 @@ export function buildTimeline({ race, cars }: RaceDetail): Timeline {
     byCode: new Map(runs.map((run) => [run.driver_code, run])),
     totalLaps: race.total_laps,
     end: Math.max(0, ...runs.map((run) => run.cum[run.cum.length - 1])),
+    pitLane: race.circuit ? pitLaneFor(race.circuit.short_name) : null,
   };
 }
 
@@ -154,7 +169,12 @@ export type Standing = {
   fraction: number;
   lap: RunLap;
   pitStops: number;
+  /** Between the pit entry and exit line. */
   inPit: boolean;
+  /** Phase of the stop in progress (entering, in the lane, exiting), null otherwise. */
+  pit: PitState | null;
+  /** Where to draw the car; differs from `fraction` around a pit stop. */
+  marker: CarMarker;
 };
 
 type Position = { run: Run; distance: number; done: boolean; lapCount: number };
@@ -176,6 +196,7 @@ export type Frame = {
   leader: Standing;
   leaderLap: number;
   finished: boolean;
+  pitLane: PitLaneSpec | null;
 };
 
 /** Leader-relative standings of the whole field at race time `t`. */
@@ -228,6 +249,8 @@ export function frameAt(timeline: Timeline, t: number): Frame {
       lap: row.run.laps[currentLap - 1],
       pitStops: row.run.stints.filter((s) => s.index > 0 && s.start <= currentLap).length,
       inPit: false,
+      pit: null,
+      marker: { fraction: row.done ? 1 : row.distance - Math.floor(row.distance), lane: null },
     };
   });
 
@@ -235,10 +258,17 @@ export function frameAt(timeline: Timeline, t: number): Frame {
     standing.ahead = standing.retired ? null : (standings[i - 1] ?? null);
     const next = standings[i + 1];
     standing.behind = standing.retired || !next || next.retired ? null : next;
-    const { lap, done, fraction } = standing;
-    standing.inPit =
-      !done &&
-      ((lap.flag === "PIT IN" && fraction > 0.9) || (lap.flag === "PIT OUT" && fraction < 0.1));
+    const { lap, done, fraction, run } = standing;
+    const stop = !done && run.stops.length > 0 ? pitAt(run.stops, t, timeline.pitLane) : null;
+    if (stop) {
+      standing.pit = stop.state;
+      standing.inPit = stop.state?.inLane ?? false;
+      if (stop.marker) standing.marker = stop.marker;
+    } else if (!done) {
+      // No timed stop covers this moment (no recorded entry/exit times): estimate from the lap flag.
+      standing.inPit =
+        (lap.flag === "PIT IN" && fraction > 0.9) || (lap.flag === "PIT OUT" && fraction < 0.1);
+    }
   });
 
   const leader = standings[0];
@@ -249,16 +279,8 @@ export function frameAt(timeline: Timeline, t: number): Frame {
     leader,
     leaderLap: Math.min(timeline.totalLaps, Math.floor(leader.distance) + 1),
     finished: t >= timeline.end - 0.01,
+    pitLane: timeline.pitLane,
   };
-}
-
-/** Race time the replay opens at: shortly after the leader starts lap 40 % in. */
-export function initialTime(timeline: Timeline): number {
-  const lap = Math.round(timeline.totalLaps * 0.4);
-  const leaderAt = Math.min(
-    ...timeline.runs.filter((run) => run.cum.length > lap).map((run) => run.cum[lap]),
-  );
-  return clamp((Number.isFinite(leaderAt) ? leaderAt : 0) + 25, 0, timeline.end);
 }
 
 /** Race time of the previous (-1) or next (+1) lap boundary for a run. */

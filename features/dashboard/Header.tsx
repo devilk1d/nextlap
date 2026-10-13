@@ -2,14 +2,14 @@
 
 import { Dropdown } from "@/components/ui/Dropdown";
 import { Segmented } from "@/components/ui/Segmented";
-import { TeamBar } from "@/components/ui/Swatch";
 import { cn } from "@/components/ui/cn";
 import { fmtDate, stripGrandPrix } from "@/lib/format";
 import { NEUTRAL_COLOR } from "@/lib/race/constants";
 import type { Run } from "@/lib/race/timeline";
 import { useReplay } from "@/features/replay/store";
 import type { RaceInfo } from "@/server/races/types";
-import { DriverMenu } from "@/features/common/DriverMenu";
+import { DriverFace, TeamLogo } from "@/features/common/Brand";
+import { DRIVER_MENU_SIZE, DriverMenu } from "@/features/common/DriverMenu";
 import { VIEWS, type View } from "./selection";
 
 const VIEW_LABELS: Record<View, string> = {
@@ -17,7 +17,6 @@ const VIEW_LABELS: Record<View, string> = {
   h2h: "Head to head",
   strat: "Strategy",
   ov: "Race overview",
-  hist: "Circuit history",
 };
 
 type Props = {
@@ -33,12 +32,11 @@ type Props = {
   loading: boolean;
 };
 
-function ReplayStatus({ view, seasons }: { view: View; seasons: string }) {
+function ReplayStatus() {
   const playing = useReplay((s) => s.playing);
   const speed = useReplay((s) => s.speed);
   const loaded = useReplay((s) => s.end > 0);
   const finished = useReplay((s) => s.end > 0 && s.time >= s.end - 0.01);
-  if (view === "hist") return <Status color="#9a9aa3" text={seasons} />;
   if (!loaded) return <Status color="var(--color-caution)" text="No data" />;
   if (playing) {
     return (
@@ -166,10 +164,10 @@ export function Header({
 
         {showDriver && (
           <Dropdown
-            width={280}
+            {...DRIVER_MENU_SIZE}
             trigger={
               <>
-                <TeamBar color={teamColor} />
+                <DriverFace code={driver.driver_code} color={teamColor} size={22} eager />
                 {driver.driver_code}
               </>
             }
@@ -189,11 +187,11 @@ export function Header({
       </div>
 
       <div className="ml-auto flex items-center gap-3.5">
-        <ReplayStatus view={view} seasons={`Seasons ${years[0]}–${years[years.length - 1]}`} />
+        <ReplayStatus />
         {driver && (
           <div className="flex items-center gap-2.5 whitespace-nowrap rounded-lg border border-control bg-raised py-[5px] pl-3 pr-1.5 text-[12.5px] font-semibold">
             {driver.team}
-            <span className="size-[22px] rounded-[5px]" style={{ background: teamColor }} />
+            <TeamLogo team={driver.team} color={teamColor} size={24} />
           </div>
         )}
       </div>

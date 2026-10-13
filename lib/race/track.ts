@@ -5,12 +5,17 @@ export type TrackGeometry = { p: Point[]; w: number; h: number; rot: number };
 
 const GEOMETRY = geometries as unknown as Record<string, TrackGeometry>;
 
-// Dataset `CircuitShortName` → key in track-geometry.json (outlines exist for the 10 study circuits).
+// Dataset `CircuitShortName` → key in track-geometry.json (outlines exist for the 25 circuits in the dataset).
 const ALIASES: Record<string, string> = { "spa-francorchamps": "spa" };
 
-export function geometryFor(circuitShortName: string): TrackGeometry | null {
+/** Key of a circuit in the per-circuit data files (`track-geometry.json`, `pit-lanes.json`). */
+export const trackKey = (circuitShortName: string): string => {
   const key = circuitShortName.toLowerCase();
-  return GEOMETRY[ALIASES[key] ?? key] ?? null;
+  return ALIASES[key] ?? key;
+};
+
+export function geometryFor(circuitShortName: string): TrackGeometry | null {
+  return GEOMETRY[trackKey(circuitShortName)] ?? null;
 }
 
 export type TrackPath = { points: Point[]; cum: number[]; total: number };
@@ -73,6 +78,13 @@ export function segmentPath(path: TrackPath, f0: number, f1: number): string {
 export const closedPath = (path: TrackPath) =>
   `M${[...path.points, path.points[0]].map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L")}`;
 
-export function trackView({ w, h, rot }: TrackGeometry) {
-  return { viewBox: `-9 -9 ${w + 18} ${h + 18}`, scale: 0.42 + (0.38 * h) / 100, rotation: rot };
+const MARGIN = 4;
+
+export function trackView({ w, h }: TrackGeometry) {
+  // A fixed margin is a big share of a flat circuit (Monza is ~50 units tall); the SVG overflows
+  // visibly, so markers and labels at the edge are not cut.
+  return {
+    viewBox: `-${MARGIN} -${MARGIN} ${w + 2 * MARGIN} ${h + 2 * MARGIN}`,
+    scale: 0.42 + (0.38 * h) / 100,
+  };
 }

@@ -4,11 +4,13 @@ import { Dropdown } from "@/components/ui/Dropdown";
 import { TeamBar } from "@/components/ui/Swatch";
 import { fmtGap, fmtLap, fmtLapsDown, fmtSigned, hexAlpha, stripGrandPrix } from "@/lib/format";
 import { tyreOf } from "@/lib/race/constants";
+import { PIT_PHASE_LABEL } from "@/lib/race/pit";
 import type { Standing } from "@/lib/race/timeline";
-import { DriverMenu } from "@/features/common/DriverMenu";
+import { DriverFace } from "@/features/common/Brand";
+import { DRIVER_MENU_SIZE, DriverMenu } from "@/features/common/DriverMenu";
 import { useFrame, useRace } from "@/features/dashboard/race-context";
 import { focusOf, type Focus } from "./focus";
-import { LapTabs } from "./LapTabs";
+import { LapLogPanel } from "./LapLogPanel";
 
 const MUTED = "var(--color-ink-mute)";
 const GO = "var(--color-go)";
@@ -60,6 +62,7 @@ function statusLine(x: Standing): [string, string] {
       `Finished P${x.position}${x.lapsDown >= 1 ? ` · ${fmtLapsDown(x.lapsDown)}` : ""}`,
       "var(--color-accent)",
     ];
+  if (x.pit) return [PIT_PHASE_LABEL[x.pit.phase], "var(--color-caution)"];
   if (x.inPit) return ["In the pit lane", "var(--color-caution)"];
   if (ahead && !lapsAhead && (gapAhead ?? 9) < 1) {
     return [`Within 1 s of ${ahead.run.driver_code} — in DRS range`, "var(--color-accent)"];
@@ -328,7 +331,7 @@ export function LeftPanel() {
     <aside className="flex min-h-0 flex-col overflow-auto rounded-xl border border-line bg-panel [grid-area:left]">
       <div className="flex items-center justify-between border-b border-divider px-3.5 py-2.5">
         <Dropdown
-          width={280}
+          {...DRIVER_MENU_SIZE}
           triggerClassName="border-0 bg-transparent p-0"
           trigger="Change driver"
         >
@@ -353,10 +356,11 @@ export function LeftPanel() {
           className="relative h-[104px] overflow-hidden"
           style={{ background: gradient(x.run.color) }}
         >
-          <span className="absolute left-2.5 top-2.5 text-[11px] font-bold tracking-[.12em]">
+          <DriverFace code={x.run.driver_code} color={x.run.color} size={104} square eager />
+          <span className="absolute left-2.5 top-2.5 text-[11px] font-bold tracking-[.12em] [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
             {x.run.driver_code}
           </span>
-          <span className="absolute bottom-1.5 left-2 font-display text-[40px] leading-none text-white/95">
+          <span className="absolute bottom-1.5 left-2 font-display text-[34px] leading-none text-white/95 [text-shadow:0_1px_4px_rgba(0,0,0,.65)]">
             {x.run.driver_number}
           </span>
         </div>
@@ -387,7 +391,7 @@ export function LeftPanel() {
         leaderCode={frame.leader.run.driver_code}
         runnerUp={frame.standings[1]}
       />
-      <LapTabs x={x} focus={focus} time={frame.time} />
+      <LapLogPanel x={x} focus={focus} time={frame.time} />
     </aside>
   );
 }

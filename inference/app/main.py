@@ -12,9 +12,12 @@ from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from app.db import Database
+from app.db import Database, load_env
 from app.model import LapTimeModel
 from app.service import Predictor, metrics
+
+# Must run before the CORS middleware below reads ALLOWED_ORIGINS at import time.
+load_env()
 
 state: dict = {}
 

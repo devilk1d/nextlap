@@ -4,11 +4,29 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from pathlib import Path
 
 import httpx
 import pandas as pd
 
 PAGE = 1000
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+
+
+def load_env(path: Path = ENV_FILE) -> None:
+    """Read KEY=VALUE lines from inference/.env into os.environ (real environment variables win).
+
+    Lets `uvicorn` and the scripts run the same way on Windows, macOS and Linux without
+    shell-specific commands. On Railway there is no .env file; variables come from the dashboard.
+    """
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
 
 # Database column (snake_case) → notebook column (laps_2022_2025_v3.parquet).
 LAP_COLUMNS = {
@@ -57,6 +75,7 @@ def to_notebook_frame(race: dict, laps: list[dict], telemetry: list[dict]) -> pd
 
 class Database:
     def __init__(self, url: str | None = None, key: str | None = None, timeout: float = 20.0):
+        load_env()
         url = url or os.environ["SUPABASE_URL"]
         key = key or os.environ["SUPABASE_PUBLISHABLE_KEY"]
         self.client = httpx.Client(base_url=f"{url.rstrip('/')}/rest/v1",

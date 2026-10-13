@@ -5,39 +5,88 @@ import type { Frame, RunLap, Standing, Timeline } from "@/lib/race/timeline";
 import { linearFit, mean, median, type LineFit } from "@/lib/stats";
 import { raceEventsByLap } from "@/lib/race/events";
 
+/**
+ * Fuel burn-off makes a car about this much quicker every lap (roughly 1.6 kg of fuel per lap at
+ * 0.03 s/kg). It is an assumption, not measured: inside one stint, fuel and tyre age rise together
+ * and cannot be told apart from lap times alone.
+ */
+export const FUEL_EFFECT_PER_LAP = 0.05;
+/** Laps slower than this share of the stint's median are traffic or mistakes and are left out. */
+const OUTLIER_RATIO = 1.07;
+/** A stint needs this many laps to give a trend of its own. */
+const MIN_STINT_LAPS = 6;
+
 export type DegradationPoint = {
   code: string;
+  stint: number;
   compound: Compound;
   age: number;
   lap: number;
+  /** Lap time corrected to the same fuel load: raw time + FUEL_EFFECT_PER_LAP × lap number. */
   seconds: number;
 };
 
-/** Clean laps completed so far by every car, as (tyre age, lap time) points. */
+/** Clean laps completed so far by every car, as (tyre age, fuel-corrected lap time) points. */
 export function degradationPoints(frame: Frame): DegradationPoint[] {
-  return frame.standings.flatMap((x) =>
-    cleanLaps(x.run, x.completed)
-      .filter((lap) => lap.compound !== null && lap.tyre_life !== null)
-      .map((lap) => ({
-        code: x.run.driver_code,
-        compound: lap.compound as Compound,
-        age: lap.tyre_life as number,
-        lap: lap.lap_number,
-        seconds: lap.lap_time_sec as number,
-      })),
-  );
+  return frame.standings.flatMap((x) => {
+    const laps = cleanLaps(x.run, x.completed).filter(
+      (lap) => lap.compound !== null && lap.tyre_life !== null && lap.lap_time_sec !== null,
+    );
+    const byStint = new Map<number, RunLap[]>();
+    for (const lap of laps)
+      byStint.set(lap.stintIndex, [...(byStint.get(lap.stintIndex) ?? []), lap]);
+    return [...byStint.entries()].flatMap(([stint, group]) => {
+      const typical = median(group.map((lap) => lap.lap_time_sec as number)) ?? Infinity;
+      return group
+        .filter((lap) => (lap.lap_time_sec as number) <= typical * OUTLIER_RATIO)
+        .map((lap) => ({
+          code: x.run.driver_code,
+          stint,
+          compound: lap.compound as Compound,
+          age: lap.tyre_life as number,
+          lap: lap.lap_number,
+          seconds: (lap.lap_time_sec as number) + FUEL_EFFECT_PER_LAP * lap.lap_number,
+        }));
+    });
+  });
 }
 
 export type CompoundFits = Partial<Record<Compound, LineFit>>;
 
-/** Net lap-time trend per lap of tyre life (fuel burn-off is not corrected for). */
+/**
+ * Tyre wear per lap of tyre life: the slope of each driver's own stint (fuel-corrected), then the
+ * median over stints. Pooling all cars would compare different drivers and cars with each other.
+ * The drawn line has that slope and passes through the middle of the compound's points.
+ */
 export function compoundFits(points: DegradationPoint[]): CompoundFits {
   const fits: CompoundFits = {};
   for (const compound of DRY_COMPOUNDS) {
-    const fit = linearFit(
-      points.filter((p) => p.compound === compound).map((p) => ({ x: p.age, y: p.seconds })),
-    );
-    if (fit) fits[compound] = fit;
+    const mine = points.filter((p) => p.compound === compound);
+    const stints = new Map<string, DegradationPoint[]>();
+    for (const p of mine)
+      stints.set(`${p.code}:${p.stint}`, [...(stints.get(`${p.code}:${p.stint}`) ?? []), p]);
+    const slopes = [...stints.values()]
+      .filter((group) => group.length >= MIN_STINT_LAPS)
+      .map(
+        (group) =>
+          linearFit(
+            group.map((p) => ({ x: p.age, y: p.seconds })),
+            MIN_STINT_LAPS,
+          )?.slope,
+      )
+      .filter((slope): slope is number => slope !== undefined);
+    const slope = median(slopes);
+    if (slope === null || mine.length < MIN_STINT_LAPS) continue;
+    const mx = mean(mine.map((p) => p.age)) ?? 0;
+    const my = mean(mine.map((p) => p.seconds)) ?? 0;
+    const ages = mine.map((p) => p.age);
+    fits[compound] = {
+      slope,
+      intercept: my - slope * mx,
+      n: mine.length,
+      xMin: Math.min(...ages),
+      xMax: Math.max(...ages),
+    };
   }
   return fits;
 }
@@ -97,33 +146,11 @@ export function pitStops(frame: Frame, timeline: Timeline): PitStop[] {
   return stops.sort((a, b) => a.lap - b.lap || (a.laneSeconds ?? 99) - (b.laneSeconds ?? 99));
 }
 
-export type TeamPit = { team: string; color: string; best: number; median: number; count: number };
-
-export function teamPitLane(stops: PitStop[]): TeamPit[] {
-  const byTeam = new Map<string, PitStop[]>();
-  for (const stop of stops) {
-    if (stop.laneSeconds !== null) byTeam.set(stop.team, [...(byTeam.get(stop.team) ?? []), stop]);
-  }
-  return [...byTeam.entries()]
-    .map(([team, items]) => {
-      const lanes = items.map((s) => s.laneSeconds as number);
-      return {
-        team,
-        color: items[0].color,
-        best: Math.min(...lanes),
-        median: median(lanes) as number,
-        count: lanes.length,
-      };
-    })
-    .sort((a, b) => a.best - b.best);
-}
-
 export type CompoundRow = {
   compound: Compound;
   stints: number;
   averageLength: number | null;
   laps: number;
-  medianSeconds: number | null;
   slope: number | null;
 };
 
@@ -144,7 +171,6 @@ export function compoundTable(
       stints: lengths.length,
       averageLength: mean(lengths),
       laps: mine.length,
-      medianSeconds: median(mine.map((p) => p.seconds)),
       slope: fits[compound]?.slope ?? null,
     };
   });
@@ -172,7 +198,10 @@ export function stintRows(x: Standing): StintRow[] {
       const fit = linearFit(
         laps
           .filter((l) => l.tyre_life !== null)
-          .map((l) => ({ x: l.tyre_life as number, y: l.lap_time_sec as number })),
+          .map((l) => ({
+            x: l.tyre_life as number,
+            y: (l.lap_time_sec as number) + FUEL_EFFECT_PER_LAP * l.lap_number,
+          })),
       );
       return {
         index: stint.index,

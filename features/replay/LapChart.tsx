@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Segmented";
-import { fmtLap, fmtLapAxis, fmtSigned, stripGrandPrix } from "@/lib/format";
+import { fmtLap, fmtLapAxis, fmtSigned } from "@/lib/format";
 import { EVENT, tyreOf } from "@/lib/race/constants";
-import { isNeutralised, noForecastReason } from "@/lib/race/laps";
+import {
+  FORECAST_WARMUP_LAPS,
+  isNeutralised,
+  noForecast,
+  noForecastSummary,
+} from "@/lib/race/laps";
 import type { Standing } from "@/lib/race/timeline";
 import { clamp } from "@/lib/stats";
 import { linePath } from "@/lib/svg";
 import { useRace } from "@/features/dashboard/race-context";
-import { neutralisedCount, stintChart } from "./chart-data";
-import { exportChartPng, exportLapsCsv } from "./exports";
+import { lapChart, neutralisedCount } from "./chart-data";
 import type { Focus } from "./focus";
 import { useReplay } from "./store";
 
@@ -29,15 +32,19 @@ function Key({ children, line }: { children: React.ReactNode; line: React.ReactN
 
 type Props = { x: Standing; focus: Focus };
 
-/** Actual vs predicted lap times of the focused driver's current stint. */
+/** Actual vs predicted lap times of the focused driver: the whole race, or one stint. */
 export function LapChart({ x, focus }: Props) {
   const { race, detail } = useRace();
   const seek = useReplay((s) => s.seek);
   const [hover, setHover] = useState<number | null>(null);
+  const [scope, setScope] = useState<"race" | "stint">("race");
 
   const { run, completed, currentLap, fraction, done } = x;
   const { stint } = focus;
-  const chart = stintChart(x, focus);
+  const whole = scope === "race";
+  const view = whole ? { start: 1, end: run.laps.length } : { start: stint.start, end: stint.end };
+  const scopeName = whole ? "Whole race" : `Stint ${stint.index + 1}`;
+  const chart = lapChart(x, view);
   const { laps, yMin, yMax } = chart;
   const n = laps.length;
   const windowSize = detail.model?.window_size ?? 3;
@@ -56,38 +63,40 @@ export function LapChart({ x, focus }: Props) {
   const inputs = run.laps
     .filter((l) => l.clean && l.lap_number < currentLap && l.lap_number >= stint.start)
     .slice(-windowSize);
-  const windowIdx = inputs.map((l) => l.lap_number - stint.start);
-  const currentIndex = currentLap - stint.start;
+  const windowIdx = inputs.map((l) => l.lap_number - view.start);
+  const currentIndex = currentLap - view.start;
   const cursor = clamp(X(currentIndex - 1 + fraction), 0, 100);
   const dirtyCount = laps.filter((l) => l.dirty && l.done).length;
 
   const hovered = hover !== null && hover < n ? laps[hover] : null;
   const hoveredRun = hovered ? run.laps[hovered.lap - 1] : null;
+  const missing = noForecastSummary(
+    run,
+    run.laps.slice(view.start - 1, view.end).filter((l) => l.lap_number <= completed),
+    race.total_laps,
+  );
+  const missingCount = missing.reduce((sum, m) => sum + m.count, 0);
   const note = (() => {
     if (!hovered || !hoveredRun) return "";
-    if (hoveredRun.flag && !isNeutralised(hoveredRun.flag))
-      return noForecastReason(hoveredRun, windowSize);
-    if (isNeutralised(hoveredRun.flag))
-      return `${EVENT[hoveredRun.flag].name} — lap excluded from model input and metrics`;
-    if (hovered.dirty) return "Dirty air — gap ahead under 1 s";
-    if (hovered.predicted === null && hover !== null && hover < windowSize) {
-      return `Warm-up: the model needs ${windowSize} laps first`;
+    if (!hovered.shown) return "Not raced yet at this point of the replay";
+    if (hoveredRun.prediction === null) {
+      const reason = noForecast(run, hoveredRun, race.total_laps);
+      return `${reason.title}. ${reason.text}`;
     }
-    return hovered.done ? "" : "Not raced yet at this point of the replay";
+    return hovered.dirty ? "Dirty air: gap ahead under 1 s" : "";
   })();
   const delta =
     hovered?.done && hovered.predicted !== null && hovered.time !== null
       ? hovered.time - hovered.predicted
       : null;
   const hoverX = hover === null ? 0 : X(hover);
-  const context = { run, grandPrix: stripGrandPrix(race.event_name), year: race.year };
 
   return (
-    <section className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-0">
+    <section className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[290px]">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-divider px-3.5 py-[9px]">
-        <span className="text-[13px] font-semibold">Lap times · stint</span>
+        <span className="text-[13px] font-semibold">Lap times</span>
         <span className="whitespace-nowrap text-[11.5px] text-ink-mute">
-          Stint {stint.index + 1} · L{stint.start}–{stint.end}
+          {scopeName} · L{view.start}–{view.end}
         </span>
         <Key line={<span className="h-0.5 w-4 bg-white" />}>Actual</Key>
         <Key line={<span className="w-4 border-t-2 border-dashed border-accent" />}>Predicted</Key>
@@ -100,40 +109,56 @@ export function LapChart({ x, focus }: Props) {
           <Key line={<span className="size-1.5 rotate-45 bg-best" />}>Dirty air · {dirtyCount}</Key>
         </span>
         <div className="ml-auto">
-          <Segmented
+          <Segmented<string | number>
             variant="plain"
-            value={stint.index}
-            onChange={(index) => seek(run.cum[run.stints[index].start - 1] + 0.02)}
-            options={run.stints.map((s) => ({
-              value: s.index,
-              title: `Stint ${s.index + 1} · ${tyreOf(s.compound).name} — jump here`,
-              label: (
-                <>
-                  <span
-                    className="size-2 rounded-full"
-                    style={{ background: tyreOf(s.compound).color }}
-                  />
-                  {`L${s.start}–${s.end}`}
-                </>
-              ),
-            }))}
+            value={whole ? "race" : stint.index}
+            onChange={(choice) => {
+              if (choice === "race") return setScope("race");
+              setScope("stint");
+              seek(run.cum[run.stints[choice as number].start - 1] + 0.02);
+            }}
+            options={[
+              {
+                value: "race",
+                title: "Show every lap from the start to the chequered flag",
+                label: "Whole race",
+              },
+              ...run.stints.map((s) => ({
+                value: s.index,
+                title: `Stint ${s.index + 1} · ${tyreOf(s.compound).name} — zoom to this stint`,
+                label: (
+                  <>
+                    <span
+                      className="size-2 rounded-full"
+                      style={{ background: tyreOf(s.compound).color }}
+                    />
+                    {`L${s.start}–${s.end}`}
+                  </>
+                ),
+              })),
+            ]}
           />
         </div>
-        <div className="flex gap-1.5">
-          <Button
-            title="Download the lap table as CSV"
-            onClick={() => exportLapsCsv(context, completed)}
-          >
-            ↓ CSV
-          </Button>
-          <Button
-            title="Download this chart as an image"
-            onClick={() => exportChartPng(context, chart, stint.index + 1)}
-          >
-            ↓ PNG
-          </Button>
-        </div>
       </div>
+
+      {missingCount > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-divider px-3.5 py-2 text-[11.5px]"
+          title={`A forecast is only made for a clean lap that follows ${FORECAST_WARMUP_LAPS} clean laps in a row on the same tyres. Hover a lap to see why it has none.`}
+        >
+          <span className="font-semibold text-ink-soft">
+            No forecast on {missingCount} lap{missingCount > 1 ? "s" : ""} because of
+          </span>
+          {missing.map((m) => (
+            <span
+              key={m.kind}
+              className="whitespace-nowrap rounded-full border border-control bg-raised px-2 py-[2px] text-ink-dim"
+            >
+              {m.label} <span className="font-bold text-ink-soft">{m.count}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div
         className="relative mb-[30px] ml-[60px] mr-4 mt-3.5 min-h-[130px] flex-1"
@@ -181,14 +206,26 @@ export function LapChart({ x, focus }: Props) {
           ) : null,
         )}
 
-        {stint.index > 0 && (
+        {whole &&
+          run.stints.slice(1).map((s) => (
+            <div
+              key={`pit${s.index}`}
+              className="absolute inset-y-0 border-l border-caution"
+              style={{ left: `${X(s.start - 1.5)}%` }}
+            >
+              <span className="absolute left-1 top-0.5 whitespace-nowrap text-[10px] font-bold text-caution">
+                PIT · L{s.start - 1}
+              </span>
+            </div>
+          ))}
+        {!whole && stint.index > 0 && (
           <div className="absolute inset-y-0 left-0 border-l border-caution">
             <span className="absolute left-1 top-0.5 whitespace-nowrap text-[10px] font-bold text-caution">
               PIT · L{stint.start - 1}
             </span>
           </div>
         )}
-        {stint.index < run.stints.length - 1 && (
+        {!whole && stint.index < run.stints.length - 1 && (
           <div className="absolute inset-y-0 right-0 border-l border-caution">
             <span className="absolute -left-[84px] top-0.5 whitespace-nowrap text-[10px] font-bold text-caution">
               PIT → L{stint.end + 1}

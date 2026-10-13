@@ -17,6 +17,20 @@ type Column = {
   color?: (row: DriverRow) => string | undefined;
 };
 
+/** Columns shown on the page. */
+const KEY_COLUMNS = [
+  "pos",
+  "code",
+  "grid",
+  "gained",
+  "status",
+  "time",
+  "points",
+  "best",
+  "pits",
+  "tyres",
+];
+
 const GO = "var(--color-go)";
 const STOP = "var(--color-stop)";
 const MUTED = "var(--color-ink-mute)";
@@ -171,7 +185,9 @@ export function Classification({ rows, selected, onToggle }: Props) {
   });
   const fastest = Math.min(...rows.map((r) => r.best ?? Infinity));
   const topSpeed = Math.max(...rows.map((r) => r.top ?? 0));
-  const cols = columns(Number.isFinite(fastest) ? fastest : null, topSpeed || null);
+  const cols = columns(Number.isFinite(fastest) ? fastest : null, topSpeed || null).filter((col) =>
+    KEY_COLUMNS.includes(col.key),
+  );
   const active = cols.find((c) => c.key === sort.key) ?? cols[0];
   const ordered = [...rows].sort((a, b) => {
     const va = active.sort(a);
@@ -180,8 +196,8 @@ export function Classification({ rows, selected, onToggle }: Props) {
   });
 
   return (
-    <div className="max-h-[560px] overflow-auto max-[1179px]:max-h-none">
-      <Table className="min-w-[1600px]">
+    <div className="overflow-auto">
+      <Table className="[&_td]:!py-[3px]">
         <thead>
           <tr>
             {cols.map((col) => (
@@ -224,8 +240,7 @@ export function Classification({ rows, selected, onToggle }: Props) {
                       <span className="flex items-center gap-2">
                         <TeamBar color={row.run.color} height={16} />
                         <b>{code}</b>
-                        <span className="text-[11.5px] text-ink-mute">{row.run.name}</span>
-                        <span className="text-[11px] text-ink-faint">{row.run.team}</span>
+                        <span className="truncate text-[11.5px] text-ink-mute">{row.run.name}</span>
                       </span>
                     </Td>
                   ) : (

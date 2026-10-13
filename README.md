@@ -24,7 +24,6 @@ tidak diperlukan. Key tidak pernah dikirim ke browser.
 | `?view=h2h` | Head to head dua pembalap: interval, lap time, selisih, perbandingan |
 | `?view=strat` | Strategi seluruh grid: gantt ban, tren lap time per umur ban, pit stop, pit lane per tim |
 | `?view=ov` | Ringkasan balapan: klasifikasi, kualifikasi, pace tim, posisi per lap, explorer metrik, traffic |
-| `?view=hist` | Riwayat sirkuit per musim |
 
 Parameter lain: `race=<race_id>`, `drv=<kode>`, `a=<kode>&b=<kode>` (head to head). Seluruh pilihan
 disimpan di URL sehingga setiap tampilan bisa dibagikan.
@@ -45,7 +44,6 @@ Error selalu berbentuk `{ "error": { "code", "message", "details?" } }`.
 | `GET /api/races/:raceId?model_run_id=` | Detail replay: `race`, `model`, `metrics`, `cars[]` → `laps[]` (lap + telemetri + `prediction` + `dirty_air`) |
 | `GET /api/races/:raceId/summary` | Ringkasan faktual: pemenang, pole, fastest lap, margin, strategi, SC/VSC/yellow, DNF, lead changes, cuaca |
 | `GET /api/circuits` | Daftar sirkuit |
-| `GET /api/circuits/:circuitKey/history` | Ringkasan per musim di sirkuit tersebut |
 | `GET /api/models` | Daftar `model_runs` |
 | `GET /api/experiments?scheme=&model_type=` | Hasil eksperimen per fold |
 
@@ -72,7 +70,7 @@ server/               backend
   models/ circuits/ reference/
 features/             frontend per fitur
   dashboard/          shell: header, transport, URL state, konteks balapan
-  replay/ h2h/ strategy/ overview/ history/   satu folder per tampilan
+  replay/ h2h/ strategy/ overview/   satu folder per tampilan
   common/             panel yang dipakai beberapa tampilan (live order, track panel)
 components/
   ui/                 Card, Segmented, Dropdown, Table, Tile, ...
@@ -117,3 +115,9 @@ deploy ada di [`inference/README.md`](inference/README.md).
   start/finish menurut sumber tersebut; untuk 15 sirkuit non-studi posisinya belum dicek manual.
 - `circuits.official_name`, `country_code`, `length_km` sudah terisi untuk semua sirkuit
   (`supabase/fill_circuit_metadata.sql`).
+- `public/img/drivers/{tahun}/{KODE}.png` dan `public/img/teams/{tahun}/{slug}.png`: foto pembalap
+  dan logo tim resmi (media.formula1.com; foto cadangan dari assets.multiviewer.dev). Dibuat dengan
+  `python scripts/assets/fetch_brand_assets.py` saat dev server jalan; daftar file yang ada ada di
+  `lib/brand-assets.generated.ts`. Pembalap tanpa foto di suatu musim memakai foto musim terdekat
+  (Colapinto 2025 → 2024, Doohan 2024 → 2025). Gambar milik Formula 1 dan tim masing-masing,
+  dipakai hanya untuk keperluan skripsi.

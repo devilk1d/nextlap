@@ -6,6 +6,8 @@ import { cn } from "./cn";
 type Props = {
   trigger: ReactNode;
   width: number;
+  /** Cap on the menu height in px before it scrolls (default 430). */
+  maxHeight?: number;
   /** Receives `close` so a choice can dismiss the menu. */
   children: (close: () => void) => ReactNode;
   className?: string;
@@ -15,9 +17,17 @@ type Props = {
 
 /**
  * Trigger button with a floating menu. The menu is fixed-positioned so it is never clipped by
- * scrolling panels; it closes on outside click, Escape, resize or scroll.
+ * scrolling panels; it closes on outside click, Escape, resize or
+ * page scroll (scrolling the menu itself keeps it open).
  */
-export function Dropdown({ trigger, width, children, className, triggerClassName }: Props) {
+export function Dropdown({
+  trigger,
+  width,
+  maxHeight = 430,
+  children,
+  className,
+  triggerClassName,
+}: Props) {
   const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const open = anchor !== null;
@@ -25,19 +35,24 @@ export function Dropdown({ trigger, width, children, className, triggerClassName
   useEffect(() => {
     if (!open) return;
     const close = () => setAnchor(null);
+    const inside = (event: Event) => root.current?.contains(event.target as Node) ?? false;
     const onPointerDown = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) close();
+      if (!inside(event)) close();
+    };
+    // Scrolling the menu itself (wheel, touch or scrollbar drag) must keep it open.
+    const onScroll = (event: Event) => {
+      if (!inside(event)) close();
     };
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && close();
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKey);
     window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [open]);
 
@@ -65,8 +80,8 @@ export function Dropdown({ trigger, width, children, className, triggerClassName
       </button>
       {anchor && (
         <div
-          style={{ width, top: anchor.top, left: anchor.left }}
-          className="fixed z-60 max-h-[430px] overflow-auto rounded-xl border border-popover bg-inset p-1.5 shadow-[0_20px_50px_rgba(0,0,0,.6)]"
+          style={{ width, maxHeight, top: anchor.top, left: anchor.left }}
+          className="fixed z-60 overflow-auto rounded-xl border border-popover bg-inset p-1.5 shadow-[0_20px_50px_rgba(0,0,0,.6)]"
         >
           {children(() => setAnchor(null))}
         </div>

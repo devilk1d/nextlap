@@ -5,7 +5,7 @@ import { getCircuits, getDrivers, getTeams } from "@/server/reference/repository
 import { omit } from "@/lib/collections";
 import { assembleRaceDetail } from "./assemble";
 import { buildMetrics } from "./metrics";
-import { getRaceBundle, getRaces, getRunPredictions } from "./repository";
+import { getRaceBundle, getRaces, getRunFactors, getRunPredictions } from "./repository";
 import type { RaceFilter } from "./schema";
 import { summarizeRace } from "./summary";
 import type { RaceDetail, RaceInfo, RaceSummary } from "./types";
@@ -55,6 +55,13 @@ export async function getRaceDetail(raceId: number, modelRunId?: number): Promis
   const { laps, predictions } = input.bundle;
   const metrics = buildMetrics(laps, predictions, baselinePredictions);
   return assembleRaceDetail({ ...input, metrics });
+}
+
+/** Feature-group split of every stored prediction of the run on this race; empty when none exists. */
+export async function getRaceFactors(raceId: number, modelRunId?: number) {
+  const model = await resolveModelRun(modelRunId);
+  const factors = model ? await getRunFactors(raceId, model.id) : [];
+  return { model_run_id: model?.id ?? null, factors };
 }
 
 /** Lighter than `getRaceDetail`: no baseline lookup or metrics. */
