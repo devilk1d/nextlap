@@ -8,15 +8,8 @@ import { EVENT, tyreOf } from "@/lib/race/constants";
 import { raceEventsByLap } from "@/lib/race/events";
 import { niceTicks, percentOf } from "@/lib/stats";
 import { useFrame, useRace } from "@/features/dashboard/race-context";
-import {
-  compoundFits,
-  compoundTable,
-  degradationPoints,
-  pitStops,
-  stintRows,
-  teamPitLane,
-} from "./analysis";
-import { CompoundTable, DegradationChart, PitStopsTable, StintsTable, TeamPitLane } from "./panels";
+import { compoundFits, compoundTable, degradationPoints, pitStops, stintRows } from "./analysis";
+import { CompoundTable, DegradationChart, PitStopsTable, StintsTable } from "./panels";
 
 const ROW = "grid grid-cols-[46px_minmax(0,1fr)_44px] items-stretch gap-2";
 
@@ -166,53 +159,40 @@ export function StrategyView() {
   const focus = frame.byCode.get(driver.driver_code);
 
   return (
-    <main className="grid min-h-0 min-w-0 grid-cols-1 gap-2 overflow-auto pb-2 [grid-area:main] wide:grid-rows-[minmax(430px,1.6fr)_minmax(290px,1fr)]">
-      <div className="grid min-h-0 grid-cols-1 gap-2 wide:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
-        <Gantt />
-        <div className="flex min-h-0 min-w-0 flex-col gap-2">
+    <main className="grid min-h-0 min-w-0 grid-cols-1 gap-2 overflow-auto [grid-area:main] wide:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] wide:grid-rows-[minmax(430px,1fr)_auto]">
+      <Gantt />
+      <Card
+        title="Pit stops"
+        sub="Lane = PitOut − PitIn · loss = in-lap + out-lap vs median"
+        className="max-h-[420px] min-h-[220px] wide:max-h-none"
+        bodyClassName="flex min-h-0 flex-col py-2"
+      >
+        <PitStopsTable stops={stops} focusCode={driver.driver_code} fill />
+      </Card>
+      <Card
+        title="Tyre degradation"
+        sub="Fuel-corrected lap time vs tyre life · clean laps so far"
+        className="min-h-[300px]"
+        bodyClassName="flex min-h-0 flex-col py-2"
+      >
+        <DegradationChart points={points} fits={fits} focusCode={driver.driver_code} fill />
+      </Card>
+      <div className="flex min-w-0 flex-col gap-2">
+        {focus && (
           <Card
-            title="Pit stops"
-            sub="Lane = PitOut − PitIn · loss = in-lap + out-lap vs median"
-            className="max-h-[420px] min-h-[180px] flex-[1.6_1_0] wide:max-h-none"
-            bodyClassName="flex min-h-0 flex-col py-2"
+            title={`${driver.driver_code} · stints so far`}
+            sub="Wear = s per lap of tyre life, fuel-corrected"
+            className="flex-none"
+            bodyClassName="py-2"
           >
-            <PitStopsTable stops={stops} focusCode={driver.driver_code} fill />
+            <StintsTable rows={stintRows(focus)} />
           </Card>
-          {focus && (
-            <Card
-              title={`${driver.driver_code} · stints so far`}
-              sub="Trend = s per lap of tyre life"
-              className="flex-none"
-              bodyClassName="py-2"
-            >
-              <StintsTable rows={stintRows(focus)} />
-            </Card>
-          )}
-        </div>
-      </div>
-
-      <div className="grid min-h-0 grid-cols-1 gap-2 wide:grid-cols-3">
-        <Card
-          title="Tyre degradation"
-          sub="Lap time vs tyre life · clean laps so far"
-          className="min-h-[300px] wide:min-h-0"
-          bodyClassName="flex min-h-0 flex-col py-2"
-        >
-          <DegradationChart points={points} fits={fits} focusCode={driver.driver_code} fill />
-        </Card>
-        <Card
-          title="Pit lane times by team"
-          sub="Best and median so far"
-          className="min-h-[220px] wide:min-h-0"
-          bodyClassName="min-h-0 overflow-auto py-2"
-        >
-          <TeamPitLane teams={teamPitLane(stops)} />
-        </Card>
+        )}
         <Card
           title="Compounds"
-          sub="Field-wide · median clean lap, no fuel correction"
-          className="min-h-[160px] wide:min-h-0"
-          bodyClassName="min-h-0 overflow-auto py-2"
+          sub="Field-wide · wear per lap, fuel-corrected"
+          className="flex-none"
+          bodyClassName="py-2"
         >
           <CompoundTable rows={compoundTable(frame, points, fits)} />
         </Card>

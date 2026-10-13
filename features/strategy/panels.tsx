@@ -5,16 +5,10 @@ import { Table, Td, Th } from "@/components/ui/Table";
 import { fmtLap, fmtLapAxis } from "@/lib/format";
 import { DRY_COMPOUNDS, EVENT, tyreOf } from "@/lib/race/constants";
 import { niceTicks, percentOf, quantileSorted } from "@/lib/stats";
-import type {
-  CompoundFits,
-  CompoundRow,
-  DegradationPoint,
-  PitStop,
-  StintRow,
-  TeamPit,
-} from "./analysis";
+import { FUEL_EFFECT_PER_LAP } from "./analysis";
+import type { CompoundFits, CompoundRow, DegradationPoint, PitStop, StintRow } from "./analysis";
 
-const SLOPE_NOTE = "Net lap-time trend per lap of tyre life; fuel burn-off is included.";
+const SLOPE_NOTE = `Wear per lap of tyre life: median of each driver's stints, fuel-corrected (${FUEL_EFFECT_PER_LAP} s/lap assumed).`;
 
 const signed = (value: number, digits = 3) => `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
 
@@ -97,7 +91,7 @@ export function DegradationChart({
                 return (
                   <span
                     key={`${p.code}-${p.lap}`}
-                    title={`${p.code} · L${p.lap} · ${tyreOf(p.compound).name} age ${p.age} · ${fmtLapAxis(p.seconds)}`}
+                    title={`${p.code} · L${p.lap} · ${tyreOf(p.compound).name} age ${p.age} · ${fmtLapAxis(p.seconds)} (fuel-corrected)`}
                     className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
                     style={{
                       left: `${toX(p.age)}%`,
@@ -208,57 +202,13 @@ export function PitStopsTable({
   );
 }
 
-export function TeamPitLane({ teams }: { teams: TeamPit[] }) {
-  if (!teams.length) return <div className="text-[12px] text-ink-mute">No pit stops yet.</div>;
-  const lo = Math.min(...teams.map((t) => t.best)) - 0.5;
-  const hi = Math.max(...teams.map((t) => t.median)) + 0.5;
-  return (
-    <div>
-      <div className="flex flex-col gap-1">
-        {teams.map((team, i) => (
-          <div
-            key={team.team}
-            className="grid grid-cols-[100px_minmax(0,1fr)_92px] items-center gap-2 text-[12px]"
-          >
-            <span className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap">
-              <TeamBar color={team.color} />
-              {team.team}
-            </span>
-            <div className="relative h-3 rounded-[3px] bg-inset">
-              <div
-                className="absolute inset-y-0 left-0 rounded-[3px] opacity-85"
-                style={{ width: `${percentOf(team.best, lo, hi)}%`, background: team.color }}
-              />
-              <div
-                className="absolute -inset-y-0.5 border-l-2 border-white"
-                style={{ left: `${percentOf(team.median, lo, hi)}%` }}
-              />
-            </div>
-            <span className={`text-right font-mono ${i ? "text-ink" : "text-best"}`}>
-              {team.best.toFixed(1)} · {team.median.toFixed(1)}
-            </span>
-          </div>
-        ))}
-      </div>
-      <Legend
-        items={[
-          [<Swatch key="b" color="#c9c9cf" size={[14, 8]} />, "Best pit-lane time"],
-          [<span key="m" className="h-2.5 w-0.5 bg-white" />, "Median"],
-          [null, "Pit lane = PitOutTime − PitInTime"],
-        ]}
-      />
-    </div>
-  );
-}
-
 export function CompoundTable({ rows }: { rows: CompoundRow[] }) {
-  const fastest = Math.min(...rows.map((r) => r.medianSeconds ?? Infinity));
   return (
     <div className="overflow-x-auto">
       <Table>
         <thead>
           <tr>
-            {["TYRE", "STINTS", "AVG LEN", "LAPS", "PACE", "TREND"].map((name, i) => (
+            {["TYRE", "STINTS", "AVG LEN", "LAPS", "WEAR"].map((name, i) => (
               <Th key={name} left={i === 0}>
                 {name}
               </Th>
@@ -277,13 +227,6 @@ export function CompoundTable({ rows }: { rows: CompoundRow[] }) {
               <Td>{row.stints}</Td>
               <Td>{row.averageLength?.toFixed(1) ?? "—"}</Td>
               <Td>{row.laps}</Td>
-              <Td>
-                {row.medianSeconds === null
-                  ? "—"
-                  : row.medianSeconds === fastest
-                    ? "fastest"
-                    : `+${(row.medianSeconds - fastest).toFixed(3)}`}
-              </Td>
               <Td>{row.slope === null ? "—" : signed(row.slope)}</Td>
             </tr>
           ))}
@@ -298,7 +241,7 @@ export function StintsTable({ rows }: { rows: StintRow[] }) {
     <Table>
       <thead>
         <tr>
-          {["STINT", "LAPS", "BEST", "AVG", "TREND"].map((name, i) => (
+          {["STINT", "LAPS", "BEST", "AVG", "WEAR"].map((name, i) => (
             <Th key={name} left={i === 0}>
               {name}
             </Th>

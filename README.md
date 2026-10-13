@@ -24,7 +24,6 @@ tidak diperlukan. Key tidak pernah dikirim ke browser.
 | `?view=h2h` | Head to head dua pembalap: interval, lap time, selisih, perbandingan |
 | `?view=strat` | Strategi seluruh grid: gantt ban, tren lap time per umur ban, pit stop, pit lane per tim |
 | `?view=ov` | Ringkasan balapan: klasifikasi, kualifikasi, pace tim, posisi per lap, explorer metrik, traffic |
-| `?view=hist` | Riwayat sirkuit per musim |
 
 Parameter lain: `race=<race_id>`, `drv=<kode>`, `a=<kode>&b=<kode>` (head to head). Seluruh pilihan
 disimpan di URL sehingga setiap tampilan bisa dibagikan.

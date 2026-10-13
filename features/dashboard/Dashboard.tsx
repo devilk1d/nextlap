@@ -5,7 +5,6 @@ import type { RaceInfo } from "@/server/races/types";
 import { useRaceDetail } from "@/lib/api";
 import { buildTimeline } from "@/lib/race/timeline";
 import { H2HView } from "@/features/h2h/H2HView";
-import { HistoryView } from "@/features/history/HistoryView";
 import { OverviewView } from "@/features/overview/OverviewView";
 import { ReplayView } from "@/features/replay/ReplayView";
 import { StrategyView } from "@/features/strategy/StrategyView";
@@ -22,7 +21,7 @@ const TRANSPORT_VIEWS: View[] = ["replay", "h2h", "strat"];
 export function Dashboard({ races }: { races: RaceInfo[] }) {
   const [selection, update] = useSelection();
   const race = races.find((r) => r.race_id === selection.raceId) ?? defaultRace(races);
-  const raceId = race?.predictable && selection.view !== "hist" ? race.race_id : null;
+  const raceId = race?.predictable ? race.race_id : null;
   const { data: detail, error, isLoading } = useRaceDetail(raceId);
 
   const timeline = useMemo(() => (detail ? buildTimeline(detail) : null), [detail]);
@@ -54,12 +53,7 @@ export function Dashboard({ races }: { races: RaceInfo[] }) {
     codes.includes(selection.b ?? "") && selection.b !== rivalA
       ? (selection.b as string)
       : (codes.find((code) => code !== rivalA) ?? "");
-  const layout =
-    !ready || view === "ov" || view === "hist"
-      ? "page"
-      : view === "strat"
-        ? "page-transport"
-        : undefined;
+  const layout = !ready || view === "ov" ? "page" : view === "strat" ? "page-transport" : undefined;
 
   const selectRace = (raceId: number) => update({ raceId, driver: null, a: null, b: null });
 
@@ -81,13 +75,7 @@ export function Dashboard({ races }: { races: RaceInfo[] }) {
         loading={isLoading}
       />
 
-      {view === "hist" ? (
-        <HistoryView
-          race={race}
-          races={races}
-          onOpenRace={(raceId) => update({ raceId, view: "ov", driver: null, a: null, b: null })}
-        />
-      ) : !race.predictable ? (
+      {!race.predictable ? (
         <Notice
           title={`${race.event_name} ${race.year}`}
           eyebrow={

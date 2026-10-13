@@ -1,11 +1,8 @@
 "use client";
 
 import useSWR, { type SWRConfiguration } from "swr";
-import type { getCircuitHistory } from "@/server/circuits/service";
 import type { getRaceFactors } from "@/server/races/service";
 import type { RaceDetail } from "@/server/races/types";
-
-export type CircuitHistory = Awaited<ReturnType<typeof getCircuitHistory>>;
 
 async function fetcher<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -30,13 +27,6 @@ export type RaceFactors = Awaited<ReturnType<typeof getRaceFactors>>;
 export const useRaceFactors = (raceId: number | null, enabled = true) =>
   useSWR<RaceFactors>(
     raceId && enabled ? `/api/races/${raceId}/factors` : null,
-    fetcher,
-    STATIC_DATA,
-  );
-
-export const useCircuitHistory =(circuitKey: number | null) =>
-  useSWR<CircuitHistory>(
-    circuitKey ? `/api/circuits/${circuitKey}/history` : null,
     fetcher,
     STATIC_DATA,
   );

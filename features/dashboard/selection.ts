@@ -4,7 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { RaceInfo } from "@/server/races/types";
 
-export const VIEWS = ["replay", "h2h", "strat", "ov", "hist"] as const;
+export const VIEWS = ["replay", "h2h", "strat", "ov"] as const;
 export type View = (typeof VIEWS)[number];
 
 export type Selection = {

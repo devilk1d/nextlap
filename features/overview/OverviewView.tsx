@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TeamBar } from "@/components/ui/Swatch";
 import { Tile } from "@/components/ui/Tile";
-import { downloadCsv } from "@/lib/download";
 import { fmtClock, fmtDate, fmtLap } from "@/lib/format";
 import { circuitCharacter } from "@/lib/circuits";
 import { eventBands, raceEventsByLap } from "@/lib/race/events";
@@ -16,100 +15,17 @@ import { Classification } from "./Classification";
 import {
   GapToLeaderChart,
   LapTimeBoxPlot,
-  MetricExplorer,
   PositionChart,
   toBands,
   WeatherCharts,
 } from "./OverviewCharts";
 import {
-  LapComparison,
   QualifyingTable,
   RaceControlFeed,
   SectorDominance,
   TeamPaceBars,
   TrafficPanel,
 } from "./OverviewPanels";
-
-function classificationCsv(rows: DriverRow[]) {
-  const header = [
-    "FinishPosition",
-    "ClassifiedPosition",
-    "Driver",
-    "Team",
-    "GridPosition",
-    "QPos",
-    "Status",
-    "LapsCompleted",
-    "Points",
-    "RaceTime_or_Gap",
-    "BestLap_sec",
-    "BestLapNumber",
-    "TheoreticalBest_sec",
-    "MedianLap_sec",
-    "LapTimeStd_sec",
-    "PitStops",
-    "Compounds",
-    "LapsLed",
-    "PctLapsInTraffic",
-    "DRSLaps",
-    "SpeedMax",
-    "SpeedI1",
-    "SpeedI2",
-    "SpeedFL",
-    "SpeedST",
-    "PctFullThrottle",
-    "PctBraking",
-    "GearShiftsPerLap",
-    "Q1",
-    "Q2",
-    "Q3",
-    "QGapToPole_pct",
-  ];
-  const fixed = (v: number | null, digits: number) => (v === null ? "" : v.toFixed(digits));
-  return [
-    header,
-    ...rows.map((r) => [
-      r.position,
-      r.run.classified_position,
-      r.run.driver_code,
-      r.run.team,
-      r.run.grid_position,
-      r.run.q_pos,
-      r.run.status,
-      r.run.laps.length,
-      r.run.points,
-      r.position === 1
-        ? r.finishSeconds.toFixed(3)
-        : r.retired
-          ? "DNF"
-          : r.lapsDown
-            ? `+${r.lapsDown}L`
-            : fixed(r.gapSeconds, 3),
-      fixed(r.best, 3),
-      r.bestLap,
-      fixed(r.theoretical, 3),
-      fixed(r.median, 3),
-      fixed(r.stdDev, 3),
-      r.pits,
-      r.strategy.join("-"),
-      r.led,
-      r.traffic.toFixed(1),
-      r.drsLaps,
-      fixed(r.top, 1),
-      fixed(r.i1, 1),
-      fixed(r.i2, 1),
-      fixed(r.fl, 1),
-      fixed(r.st, 1),
-      fixed(r.throttle, 2),
-      fixed(r.braking, 2),
-      fixed(r.shifts, 2),
-      fixed(r.run.q1_sec, 3),
-      fixed(r.run.q2_sec, 3),
-      fixed(r.run.q3_sec, 3),
-      fixed(r.run.q_gap_to_pole_pct, 3),
-    ]),
-  ];
-}
 
 export function OverviewView() {
   const { race, detail, timeline, driver } = useRace();
@@ -139,23 +55,8 @@ export function OverviewView() {
     (best, r) => (r.best !== null && (!best || r.best < (best.best as number)) ? r : best),
     null,
   );
-  const topSpeed = rows.reduce<DriverRow | null>(
-    (best, r) => (r.top !== null && (!best || r.top > (best.top as number)) ? r : best),
-    null,
-  );
-  const gainer = rows.reduce<DriverRow | null>(
-    (best, r) => (r.gained !== null && (!best || r.gained > (best.gained as number)) ? r : best),
-    null,
-  );
   const retired = rows.filter((r) => r.retired);
   const stops = rows.reduce((sum, r) => sum + r.pits, 0);
-  const laps = timeline.runs.flatMap((run) => run.laps);
-  const range = (values: (number | null)[]) => {
-    const present = values.filter((v): v is number => v !== null);
-    return present.length ? [Math.min(...present), Math.max(...present)] : null;
-  };
-  const trackRange = range(laps.map((l) => l.track_temp));
-  const airRange = range(laps.map((l) => l.air_temp));
   const lengthKm =
     race.circuit.length_km ?? (race.circ_length_m ? race.circ_length_m / 1000 : null);
   const character = circuitCharacter(race.circuit.short_name);
@@ -163,7 +64,7 @@ export function OverviewView() {
 
   return (
     <main className="min-h-0 min-w-0 overflow-auto [grid-area:main]">
-      <div className="flex flex-col gap-2 pb-2">
+      <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-line bg-panel px-4 py-3">
           <div>
             <div className="text-[11px] font-bold tracking-[.1em] text-accent">RACE OVERVIEW</div>
@@ -178,22 +79,9 @@ export function OverviewView() {
             {lengthKm ? ` · ${(lengthKm * timeline.totalLaps).toFixed(1)} km` : ""}
             {character ? ` · ${character}` : ""}
           </div>
-          <div className="ml-auto flex flex-wrap gap-1.5">
-            <Button
-              title="Final classification with summary columns"
-              onClick={() =>
-                downloadCsv(
-                  `classification_${race.year}_${race.circuit.short_name}.csv`,
-                  classificationCsv(rows),
-                )
-              }
-            >
-              ↓ Classification CSV
-            </Button>
-          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 wide:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 wide:grid-cols-6">
           <Tile
             label="Winner"
             value={winner?.run.name ?? "—"}
@@ -220,23 +108,6 @@ export function OverviewView() {
             sub={fastest ? `${fastest.run.driver_code} · lap ${fastest.bestLap}` : ""}
           />
           <Tile
-            label="Top speed"
-            value={topSpeed ? `${topSpeed.top?.toFixed(0)} km/h` : "—"}
-            sub={topSpeed ? `${topSpeed.run.driver_code} · speed max` : ""}
-          />
-          <Tile
-            label="Biggest gainer"
-            value={
-              gainer ? `${(gainer.gained as number) > 0 ? "+" : ""}${gainer.gained} places` : "—"
-            }
-            valueColor="var(--color-go)"
-            sub={
-              gainer
-                ? `${gainer.run.driver_code} · P${gainer.run.grid_position} → P${gainer.position}`
-                : ""
-            }
-          />
-          <Tile
             label="Lead changes"
             value={String(summary.lead_changes)}
             sub={`${rows.filter((r) => r.led > 0).length} drivers led a lap`}
@@ -247,49 +118,28 @@ export function OverviewView() {
             sub={`${(stops / rows.length).toFixed(1)} per driver`}
           />
           <Tile
-            label="Neutralised periods"
+            label="Neutralised"
             value={String(incidents.safety_car + incidents.vsc)}
             valueColor={incidents.safety_car + incidents.vsc ? "var(--color-caution)" : undefined}
-            sub={`SC ${incidents.safety_car} · VSC ${incidents.vsc} · yellow ${incidents.yellow}`}
-          />
-          <Tile
-            label="Retirements"
-            value={String(retired.length)}
-            valueColor={retired.length ? "var(--color-stop)" : undefined}
-            sub={
-              retired.length
-                ? retired.map((r) => r.run.driver_code).join(", ")
-                : "All cars classified"
-            }
-          />
-          <Tile
-            label="Track temp"
-            value={trackRange ? `${trackRange[0].toFixed(1)}–${trackRange[1].toFixed(1)}°` : "—"}
-            sub={airRange ? `Air ${airRange[0].toFixed(1)}–${airRange[1].toFixed(1)} °C` : ""}
+            sub={`SC ${incidents.safety_car} · VSC ${incidents.vsc} · ${retired.length} DNF`}
           />
         </div>
 
-        <Card
-          title="Classification & race summary"
-          sub="Click a column to sort · click a row to compare the driver below"
-          bodyClassName="p-0"
-        >
-          <Classification rows={rows} selected={selected} onToggle={toggle} />
-        </Card>
-
-        <div className="grid grid-cols-1 gap-2 wide:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-          <Card title="Qualifying" sub="Q1 · Q2 · Q3 and the starting grid">
+        <div className="grid grid-cols-1 gap-2 wide:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <Card
+            title="Classification"
+            sub="Click a column to sort · click a row to compare"
+            bodyClassName="p-0"
+          >
+            <Classification rows={rows} selected={selected} onToggle={toggle} />
+          </Card>
+          <Card title="Qualifying" sub="Q1 · Q2 · Q3 and grid">
             <QualifyingTable rows={rows} />
           </Card>
-          <Card title="Team race pace" sub="Clean laps · sorted by median">
-            <TeamPaceBars teams={teams} />
-          </Card>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-panel px-3.5 py-2.5">
-          <div className="mb-1 w-full text-[11.5px] text-ink-dim">
-            Drivers compared in the charts below (teammates drawn dashed)
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-panel px-3.5 py-2">
+          <span className="mr-1 text-[11.5px] text-ink-dim">Compare in the charts</span>
           {rows.map((row) => {
             const on = selected.includes(row.run.driver_code);
             return (
@@ -298,7 +148,7 @@ export function OverviewView() {
                 type="button"
                 title={row.run.name}
                 onClick={() => toggle(row.run.driver_code)}
-                className="flex cursor-pointer items-center gap-[5px] rounded-md border px-2 py-1 text-[11.5px] font-bold"
+                className="flex cursor-pointer items-center gap-[5px] rounded-md border px-2 py-[3px] text-[11.5px] font-bold"
                 style={{
                   borderColor: on ? row.run.color : "var(--color-control)",
                   background: on
@@ -321,27 +171,30 @@ export function OverviewView() {
           <Button onClick={() => setSelection([])}>Clear</Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 wide:grid-cols-2">
-          <Card title="Position by lap" sub="All drivers · selected highlighted">
+        <div className="grid grid-cols-1 gap-2 wide:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
+          <Card title="Position by lap" sub="Selected drivers highlighted">
             <PositionChart timeline={timeline} rows={rows} selected={selected} bands={bands} />
           </Card>
-          <Card title="Gap to leader" sub="Seconds behind the race leader at each lap">
+          <Card title="Gap to leader" sub="Seconds behind the leader">
             <GapToLeaderChart timeline={timeline} rows={rows} selected={selected} bands={bands} />
+          </Card>
+          <Card
+            title="Race control"
+            sub="Flags, DNFs, leaders, stops"
+            bodyClassName="relative min-h-[240px]"
+          >
+            <RaceControlFeed events={events} />
           </Card>
         </div>
 
-        <Card title="Lap metric explorer" sub="Every lap column of the dataset">
-          <MetricExplorer timeline={timeline} rows={rows} selected={selected} bands={bands} />
-        </Card>
-
-        <div className="grid grid-cols-1 gap-2 wide:grid-cols-2">
-          <Card
-            title="Lap time distribution"
-            sub="Clean laps · box = middle 50% · line = median · sorted by median"
-          >
+        <div className="grid grid-cols-1 gap-2 wide:grid-cols-3">
+          <Card title="Lap time spread" sub="Box = middle 50% · line = median">
             <LapTimeBoxPlot rows={rows} />
           </Card>
-          <Card title="Sector dominance" sub="Each sector coloured by the fastest selected driver">
+          <Card title="Team race pace" sub="Clean laps · sorted by median">
+            <TeamPaceBars teams={teams} />
+          </Card>
+          <Card title="Sector dominance" sub="Fastest selected driver per sector">
             <SectorDominance
               timeline={timeline}
               circuitName={race.circuit.short_name}
@@ -352,23 +205,11 @@ export function OverviewView() {
         </div>
 
         <div className="grid grid-cols-1 gap-2 wide:grid-cols-2">
-          <Card title="Lap comparison" sub="Every lap metric side by side">
-            <LapComparison key={race.race_id} rows={rows} />
-          </Card>
-          <Card title="Traffic" sub="Effect of running close to the car ahead">
+          <Card title="Traffic" sub="Pace lost when following closely">
             <TrafficPanel bins={traffic} rows={rows} />
           </Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 wide:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <Card title="Weather through the race">
             <WeatherCharts timeline={timeline} rows={rows} selected={selected} bands={bands} />
-          </Card>
-          <Card
-            title="Race control"
-            sub="Grid, flags, retirements, leaders, fastest laps, pit stops"
-          >
-            <RaceControlFeed events={events} />
           </Card>
         </div>
       </div>
