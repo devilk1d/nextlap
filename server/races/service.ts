@@ -3,6 +3,7 @@ import { notFound } from "@/server/http";
 import { resolveBaselineRun, resolveModelRun } from "@/server/models/service";
 import { getCircuits, getDrivers, getTeams } from "@/server/reference/repository";
 import { omit } from "@/lib/collections";
+import { getLivePredictions } from "@/server/inference/client";
 import { assembleRaceDetail } from "./assemble";
 import { buildMetrics } from "./metrics";
 import { getRaceBundle, getRaces, getRunFactors, getRunPredictions } from "./repository";
@@ -52,9 +53,17 @@ export async function getRaceDetail(raceId: number, modelRunId?: number): Promis
   const input = await loadRace(raceId, modelRunId);
   const baseline = input.model && (await resolveBaselineRun(input.model));
   const baselinePredictions = baseline ? await getRunPredictions(raceId, baseline.id) : [];
-  const { laps, predictions } = input.bundle;
-  const metrics = buildMetrics(laps, predictions, baselinePredictions);
-  return assembleRaceDetail({ ...input, metrics });
+  // The deployed model is the final LSTM of the notebook: only that run is served live.
+  const live = input.model?.purpose === "final" && input.model.model_type === "LSTM";
+  const livePredictions = live ? await getLivePredictions(raceId) : null;
+  const bundle = livePredictions ? { ...input.bundle, predictions: livePredictions } : input.bundle;
+  const metrics = buildMetrics(bundle.laps, bundle.predictions, baselinePredictions);
+  return assembleRaceDetail({
+    ...input,
+    bundle,
+    metrics,
+    predictionSource: livePredictions ? "inference_api" : "database",
+  });
 }
 
 /** Feature-group split of every stored prediction of the run on this race; empty when none exists. */

@@ -104,6 +104,15 @@ Folder `inference/` berisi API Python (FastAPI) yang menjalankan model final not
 window 5) langsung dari data Supabase. Cara kerja, pengujian paritas dengan notebook, dan langkah
 deploy ada di [`inference/README.md`](inference/README.md).
 
+## Model yang di-deploy
+
+Bila `INFERENCE_API_URL` terisi (URL service `inference/` di Railway), website memanggil
+`GET /v1/races/{id}/predictions` sekali per balapan di server (timeout 10 detik, di-cache beberapa
+jam) untuk run final LSTM, lalu memakai hasilnya sebagai prediksi lap dan metrik. Jika URL kosong,
+lambat, atau API tidak bisa dihubungi, website memakai prediksi tersimpan di Supabase tanpa
+pesan error. Run lain (mis. generalisasi) selalu dari Supabase. Respons `/api/races/:id` memuat
+`prediction_source` (`inference_api` atau `database`). Kode: `server/inference/`.
+
 ## Data pendukung
 
 - `data/permutation-importance.json`: permutation importance per **kelompok fitur** dari model final

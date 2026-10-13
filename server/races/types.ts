@@ -16,8 +16,7 @@ export type RaceInfo = Omit<RaceRow, "is_wet" | "is_predictable"> & {
   circuit: CircuitRow;
 };
 
-type BundleLap = LapRow &
-  Partial<Omit<LapTelemetryRow, "race_id" | "driver_code" | "lap_number">>;
+type BundleLap = LapRow & Partial<Omit<LapTelemetryRow, "race_id" | "driver_code" | "lap_number">>;
 
 /** Payload of the `race_bundle` RPC (telemetry keys are absent when a lap has none). */
 export type RaceBundle = {
@@ -55,6 +54,8 @@ export type RaceMetric = {
 };
 
 export type RaceDetail = {
+  /** Where the forecasts came from: the deployed model API, or the predictions stored in the database. */
+  prediction_source: "inference_api" | "database";
   race: RaceInfo;
   /** Run the predictions come from; null when none is selected or flagged as default. */
   model: ModelRun | null;
