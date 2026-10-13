@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { TeamBar, TyreDot } from "@/components/ui/Swatch";
+import { TyreDot } from "@/components/ui/Swatch";
+import { DriverFace } from "@/features/common/Brand";
 import { fmtLap } from "@/lib/format";
 import { tyreOf } from "@/lib/race/constants";
 import { sectorShares } from "@/lib/race/laps";
@@ -24,7 +25,7 @@ function DriverCell({ x, color }: { x: Standing; color: string }) {
   return (
     <Cell className="min-w-[150px] flex-1">
       <span className={`${LABEL} flex items-center gap-1.5`}>
-        <TeamBar color={color} height={10} />
+        <DriverFace code={x.run.driver_code} color={color} size={18} />
         <span className="font-bold text-ink-soft">{x.run.driver_code}</span>
         <span>P{x.position}</span>
         <span>· {last ? `last lap L${last.lap_number}` : "no lap yet"}</span>

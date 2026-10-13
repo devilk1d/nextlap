@@ -69,8 +69,7 @@ function LiveRow({ s, index, mode, on, onPick }: RowProps) {
     const moved = seen.index - index; // > 0: moved up the order
     setSeen({
       index,
-      flash:
-        Math.abs(moved) <= MAX_FLASH_PLACES ? (moved > 0 ? "lo-gain" : "lo-loss") : "",
+      flash: Math.abs(moved) <= MAX_FLASH_PLACES ? (moved > 0 ? "lo-gain" : "lo-loss") : "",
       run: seen.run + 1,
     });
   }

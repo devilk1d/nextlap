@@ -27,7 +27,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Next Lap Predictor",
+  title: "Next Lap",
   description: "Lap-time forecasts and race replay for Formula 1, 2022–2025.",
 };
 

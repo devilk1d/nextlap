@@ -6,6 +6,8 @@ import { cn } from "./cn";
 type Props = {
   trigger: ReactNode;
   width: number;
+  /** Cap on the menu height in px before it scrolls (default 430). */
+  maxHeight?: number;
   /** Receives `close` so a choice can dismiss the menu. */
   children: (close: () => void) => ReactNode;
   className?: string;
@@ -18,7 +20,14 @@ type Props = {
  * scrolling panels; it closes on outside click, Escape, resize or
  * page scroll (scrolling the menu itself keeps it open).
  */
-export function Dropdown({ trigger, width, children, className, triggerClassName }: Props) {
+export function Dropdown({
+  trigger,
+  width,
+  maxHeight = 430,
+  children,
+  className,
+  triggerClassName,
+}: Props) {
   const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const open = anchor !== null;
@@ -71,8 +80,8 @@ export function Dropdown({ trigger, width, children, className, triggerClassName
       </button>
       {anchor && (
         <div
-          style={{ width, top: anchor.top, left: anchor.left }}
-          className="fixed z-60 max-h-[430px] overflow-auto rounded-xl border border-popover bg-inset p-1.5 shadow-[0_20px_50px_rgba(0,0,0,.6)]"
+          style={{ width, maxHeight, top: anchor.top, left: anchor.left }}
+          className="fixed z-60 overflow-auto rounded-xl border border-popover bg-inset p-1.5 shadow-[0_20px_50px_rgba(0,0,0,.6)]"
         >
           {children(() => setAnchor(null))}
         </div>

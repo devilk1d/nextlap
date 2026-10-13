@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { TrackMap } from "@/components/charts/TrackMap";
 import { Legend } from "@/components/ui/Legend";
 import { Swatch, TeamBar } from "@/components/ui/Swatch";
+import { TeamLogo } from "@/features/common/Brand";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { fmtLap } from "@/lib/format";
 import { sectorShares } from "@/lib/race/laps";
@@ -97,7 +98,7 @@ export function TeamPaceBars({ teams }: { teams: TeamPace[] }) {
             className="grid grid-cols-[110px_minmax(0,1fr)_64px] items-center gap-2.5 text-[12px]"
           >
             <span className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap">
-              <TeamBar color={team.color} />
+              <TeamLogo team={team.team} color={team.color} size={16} />
               {team.team}
             </span>
             <div className="relative h-3.5 rounded-[3px] bg-inset">

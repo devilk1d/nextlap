@@ -3,9 +3,10 @@
 import { TyreStrip } from "@/components/ui/TyreStrip";
 import { cn } from "@/components/ui/cn";
 import { TyreDot } from "@/components/ui/Swatch";
-import { fmtLap, hexAlpha } from "@/lib/format";
+import { fmtLap } from "@/lib/format";
 import { tyreOf } from "@/lib/race/constants";
 import type { Run, Standing } from "@/lib/race/timeline";
+import { DriverFace } from "@/features/common/Brand";
 
 type Props = {
   slot: "A" | "B";
@@ -18,9 +19,6 @@ type Props = {
   onPick: (code: string) => void;
 };
 
-const gradient = (color: string) =>
-  `linear-gradient(150deg,${color} 0%,${hexAlpha(color, 0.45)} 52%,#141416 100%)`;
-
 function DriverCard({ slot, x, lineColor, runs, otherCode, totalLaps, onPick }: Props) {
   const { run } = x;
   const change = (run.grid_position ?? x.position) - x.position;
@@ -30,14 +28,17 @@ function DriverCard({ slot, x, lineColor, runs, otherCode, totalLaps, onPick }: 
   return (
     <div className="border-b border-divider">
       <div className="flex items-center gap-3 px-3.5 py-3">
-        <div
-          className="grid size-[46px] flex-none place-items-center rounded-[10px] font-display text-[15px]"
-          style={{ background: gradient(run.color) }}
-        >
-          {run.driver_number}
-        </div>
+        <DriverFace
+          code={run.driver_code}
+          color={run.color}
+          size={46}
+          eager
+          className="!rounded-[10px]"
+        />
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] text-ink-mute">Driver {slot}</div>
+          <div className="text-[11px] text-ink-mute">
+            Driver {slot} · #{run.driver_number}
+          </div>
           <div className="truncate text-[15px] font-bold">{run.name}</div>
           <div className="text-[11.5px] text-ink-mute">{run.team}</div>
         </div>

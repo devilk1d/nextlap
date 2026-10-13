@@ -116,3 +116,9 @@ deploy ada di [`inference/README.md`](inference/README.md).
   start/finish menurut sumber tersebut; untuk 15 sirkuit non-studi posisinya belum dicek manual.
 - `circuits.official_name`, `country_code`, `length_km` sudah terisi untuk semua sirkuit
   (`supabase/fill_circuit_metadata.sql`).
+- `public/img/drivers/{tahun}/{KODE}.png` dan `public/img/teams/{tahun}/{slug}.png`: foto pembalap
+  dan logo tim resmi (media.formula1.com; foto cadangan dari assets.multiviewer.dev). Dibuat dengan
+  `python scripts/assets/fetch_brand_assets.py` saat dev server jalan; daftar file yang ada ada di
+  `lib/brand-assets.generated.ts`. Pembalap tanpa foto di suatu musim memakai foto musim terdekat
+  (Colapinto 2025 → 2024, Doohan 2024 → 2025). Gambar milik Formula 1 dan tim masing-masing,
+  dipakai hanya untuk keperluan skripsi.

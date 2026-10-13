@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/components/ui/cn";
-import { fmtTimer } from "@/lib/format";
 import type { Standing } from "@/lib/race/timeline";
+import { TeamLogo } from "@/features/common/Brand";
 import {
   BRAKE_COLOR,
   clamp01,
@@ -109,8 +109,10 @@ function PedalColumn({
  * telemetry file, and shows the averages of the last lap otherwise.
  */
 export function CarData({ x, time }: Props) {
-  const { live, elapsed, lap, speed, topSpeed, throttle, brakeShare, rpm, gear, drs } =
-    useCarReading(x, time);
+  const { live, lap, speed, topSpeed, throttle, brakeShare, rpm, gear, drs } = useCarReading(
+    x,
+    time,
+  );
   const surname = (x.run.name.split(" ").at(-1) ?? x.run.name).toUpperCase();
 
   const caption = live
@@ -120,23 +122,11 @@ export function CarData({ x, time }: Props) {
   return (
     <div title={caption} className="flex min-h-0 flex-1 flex-col gap-3.5">
       <div className="flex items-center gap-2.5">
-        <span className="h-8 w-[3px] shrink-0 rounded-sm" style={{ background: x.run.color }} />
+        <TeamLogo team={x.run.team} color={x.run.color} size={32} />
         <div className="min-w-0 leading-tight">
           <div className="truncate text-[15px] font-bold tracking-[.02em]">{surname}</div>
           <div className="truncate text-[12px] text-ink-mute">{x.run.team}</div>
         </div>
-        <span
-          className="ml-auto whitespace-nowrap rounded-md border border-control bg-raised px-2 py-[3px] font-mono text-[11.5px] font-semibold"
-          title={live ? "Lap in progress" : "Averages of the last completed lap"}
-        >
-          {live ? (
-            <>
-              <span className="text-go">●</span> L{x.currentLap} · {fmtTimer(Math.max(0, elapsed))}
-            </>
-          ) : (
-            `L${lap.lap_number} avg`
-          )}
-        </span>
       </div>
 
       <div>
