@@ -13,6 +13,7 @@ type Input = {
   metrics: RaceDetail["metrics"];
   teams: TeamRow[];
   drivers: DriverRow[];
+  predictionSource?: RaceDetail["prediction_source"];
 };
 
 export const lapKey = (driverCode: string, lapNumber: number) => `${driverCode}:${lapNumber}`;
@@ -30,6 +31,7 @@ export function assembleRaceDetail({
   metrics,
   teams,
   drivers,
+  predictionSource = "database",
 }: Input): RaceDetail {
   const teamByName = new Map(teams.map((team) => [team.name, team]));
   const nameByCode = new Map(drivers.map((driver) => [driver.code, driver.full_name]));
@@ -60,5 +62,5 @@ export function assembleRaceDetail({
     };
   });
 
-  return { race, model, metrics, cars };
+  return { race, model, metrics, cars, prediction_source: predictionSource };
 }
