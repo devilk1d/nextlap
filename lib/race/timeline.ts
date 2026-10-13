@@ -264,8 +264,8 @@ export function frameAt(timeline: Timeline, t: number): Frame {
       standing.pit = stop.state;
       standing.inPit = stop.state?.inLane ?? false;
       if (stop.marker) standing.marker = stop.marker;
-    } else if (!done && run.stops.length === 0) {
-      // No recorded entry/exit times: estimate from the lap flag.
+    } else if (!done) {
+      // No timed stop covers this moment (no recorded entry/exit times): estimate from the lap flag.
       standing.inPit =
         (lap.flag === "PIT IN" && fraction > 0.9) || (lap.flag === "PIT OUT" && fraction < 0.1);
     }

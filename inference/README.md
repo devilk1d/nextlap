@@ -106,7 +106,9 @@ python -m scripts.backfill_predictions --write
 ```
 
 Setelah itu prediksinya tersedia lewat `GET /api/races/:raceId?model_run_id=43` di website. Dashboard
-memakai run dengan `is_default = true`. Jika run 43 dijadikan default, ingat bahwa 31.460 dari 40.440
-prediksinya berlabel `in_sample` (data latih); untuk klaim generalisasi gunakan run 41 (out-of-fold).
+memakai run dengan `is_default = true`, yaitu run 43. `scripts.explain_predictions` menulis faktor
+penjelas ke run yang sama (`RUN_NAME = "final:LSTM:E"`), jadi `is_default` harus tetap di run 43; kalau
+dipindah, jalankan ulang skrip itu untuk run baru. Ingat bahwa 31.460 dari 40.440 prediksi run 43
+berlabel `in_sample` (data latih); untuk klaim generalisasi gunakan run 41 (out-of-fold).
 Website menyimpan hasil query di cache (`"use cache"`, beberapa jam), jadi perubahan `is_default`
 baru terlihat setelah server di-restart / redeploy.

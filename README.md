@@ -44,7 +44,6 @@ Error selalu berbentuk `{ "error": { "code", "message", "details?" } }`.
 | `GET /api/races/:raceId?model_run_id=` | Detail replay: `race`, `model`, `metrics`, `cars[]` → `laps[]` (lap + telemetri + `prediction` + `dirty_air`) |
 | `GET /api/races/:raceId/summary` | Ringkasan faktual: pemenang, pole, fastest lap, margin, strategi, SC/VSC/yellow, DNF, lead changes, cuaca |
 | `GET /api/circuits` | Daftar sirkuit |
-| `GET /api/circuits/:circuitKey/history` | Ringkasan per musim di sirkuit tersebut |
 | `GET /api/models` | Daftar `model_runs` |
 | `GET /api/experiments?scheme=&model_type=` | Hasil eksperimen per fold |
 
@@ -71,7 +70,7 @@ server/               backend
   models/ circuits/ reference/
 features/             frontend per fitur
   dashboard/          shell: header, transport, URL state, konteks balapan
-  replay/ h2h/ strategy/ overview/ history/   satu folder per tampilan
+  replay/ h2h/ strategy/ overview/   satu folder per tampilan
   common/             panel yang dipakai beberapa tampilan (live order, track panel)
 components/
   ui/                 Card, Segmented, Dropdown, Table, Tile, ...

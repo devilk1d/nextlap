@@ -43,8 +43,16 @@ function LogEntry({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       className="cursor-pointer border-l-2 border-transparent py-[9px] pl-3 pr-3.5"
       onClick={onSeek}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSeek();
+        }
+      }}
     >
       <div className="flex items-baseline gap-2">
         <span className="text-[12px] text-ink-mute">L{lap.lap_number}</span>
