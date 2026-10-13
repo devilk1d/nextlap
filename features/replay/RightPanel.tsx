@@ -1,16 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { TyreStrip } from "@/components/ui/TyreStrip";
 import { tyreOf } from "@/lib/race/constants";
-import {
-  compareToReference,
-  PROFILE_METRICS,
-  referenceLaps,
-  type Comparison,
-} from "@/lib/race/lap-profile";
-import type { RunLap, Standing } from "@/lib/race/timeline";
+import type { Standing } from "@/lib/race/timeline";
 import { LiveOrder } from "@/features/common/LiveOrder";
 import { useFrame, useRace } from "@/features/dashboard/race-context";
 import { CarData } from "./CarData";
@@ -79,90 +72,6 @@ function Tyres({ x, focus }: { x: Standing; focus: Focus }) {
 /** On wide screens the car data is a card beside the hero; below that it sits here. */
 const BESIDE_HERO = "min-[1450px]:hidden";
 
-const ARROW = { up: "▲", down: "▼", same: "●" } as const;
-
-/** "+6", "−0.4" or "±0": the difference at the precision the value itself is shown in. */
-function deltaText(comparison: Comparison, digits: number): string {
-  if (comparison.direction === "same") return "±0";
-  const sign = comparison.delta > 0 ? "+" : "−";
-  return `${sign}${Math.abs(comparison.delta).toFixed(digits)}`;
-}
-
-/**
- * The lap aggregates the forecast model reads, folded away until asked for. Each value is set
- * against the average of the driver's own earlier clean laps, so it can be read as "how unusual
- * was this lap for this driver". It says nothing about how the model weighs the numbers.
- */
-function ModelInputs({ x, lap }: { x: Standing; lap: RunLap }) {
-  const [open, setOpen] = useState(false);
-  const panel = useId();
-  const references = referenceLaps(x.run, lap.lap_number);
-  const rows = PROFILE_METRICS.map((metric) => ({
-    metric,
-    value: lap[metric.key] as number | null,
-    comparison: compareToReference(lap[metric.key] as number | null, references, metric),
-  }));
-  const compared = rows.find((row) => row.comparison)?.comparison?.laps ?? 0;
-
-  return (
-    <div>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={panel}
-        onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-control px-2.5 py-1.5 text-left text-[12px] text-ink-dim hover:bg-raised"
-      >
-        <span>
-          Model inputs · {rows.length} values
-          {open && compared > 0 && (
-            <span className="text-ink-mute"> · vs previous {compared} clean laps</span>
-          )}
-        </span>
-        <span aria-hidden className="text-[10px] text-ink-mute">
-          {open ? "▲" : "▼"}
-        </span>
-      </button>
-      {open && (
-        <div id={panel} className="mt-1.5">
-          <p className="mb-1 text-[11px] leading-[1.45] text-ink-mute">
-            What the forecast model reads from the last lap.{" "}
-            {compared > 0
-              ? `▲ ▼ show this lap minus this driver's average over the previous ${compared} clean laps. It shows how unusual the lap was, not how the model weighs it.`
-              : "Not enough earlier clean laps to compare with yet."}
-          </p>
-          {rows.map(({ metric, value, comparison }) => (
-            <div
-              key={metric.key}
-              className="flex items-baseline justify-between gap-2 border-b border-rowline py-1 text-[12px]"
-              title={
-                comparison
-                  ? `Average of the previous ${comparison.laps} clean laps: ${comparison.reference.toFixed(metric.digits)}${metric.unit}`
-                  : undefined
-              }
-            >
-              <span className="text-ink-dim">{metric.name}</span>
-              <span className="flex items-baseline gap-2">
-                <span className="font-mono">{num(value, metric.digits, metric.unit)}</span>
-                <span className="w-[58px] text-right font-mono text-[11px] text-ink-mute">
-                  {comparison ? (
-                    <>
-                      <span className="text-[9px]">{ARROW[comparison.direction]}</span>{" "}
-                      {deltaText(comparison, metric.digits)}
-                    </>
-                  ) : (
-                    ""
-                  )}
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function Telemetry({ x, focus, time }: { x: Standing; focus: Focus; time: number }) {
   const lap = focus.lastLap ?? focus.currentLap;
 
@@ -181,7 +90,7 @@ function Telemetry({ x, focus, time }: { x: Standing; focus: Focus; time: number
       bodyClassName="flex flex-col gap-3 pb-3.5"
     >
       <div className={BESIDE_HERO}>
-        <CarData x={x} focus={focus} time={time} />
+        <CarData x={x} time={time} />
       </div>
       <LapStats focus={focus} />
       <div>
@@ -195,7 +104,6 @@ function Telemetry({ x, focus, time }: { x: Standing; focus: Focus; time: number
           ))}
         </div>
       </div>
-      <ModelInputs x={x} lap={lap} />
     </Card>
   );
 }

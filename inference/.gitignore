@@ -2,3 +2,5 @@ __pycache__/
 .venv/
 .env
 predictions_final.csv
+factors_final.csv
+explain_all.log

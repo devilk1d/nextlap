@@ -175,7 +175,8 @@ export function LapLogPanel({ x, focus, time }: Props) {
               )}
               lapTone={lapToneOf(timeline, run, lap.lap_number)}
               tolerance={tolerance}
-              onSeek={() => seek(run.cum[lap.lap_number] + 0.02)}
+              // `cum[n]` is the end of lap n; the start of lap n is `cum[n - 1]`.
+              onSeek={() => seek(run.cum[lap.lap_number - 1] + 0.02)}
             />
           );
         })}

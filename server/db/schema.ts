@@ -178,6 +178,30 @@ export type LapPredictionRow = {
   origin: PredictionOrigin;
 };
 
+/**
+ * One prediction split into feature-group contributions (seconds):
+ * `predicted = window_mean_sec + baseline_shift + sum of the c_* columns`.
+ * `ref_*` are the race medians that served as the "typical" value.
+ */
+export type PredictionFactorRow = {
+  model_run_id: number;
+  race_id: number;
+  driver_code: string;
+  lap_number: number;
+  window_mean_sec: number;
+  baseline_shift: number;
+  c_pace: number;
+  c_progress: number;
+  c_telemetry: number;
+  c_tyres: number;
+  c_weather: number;
+  c_traffic: number;
+  c_track: number;
+  ref_gap_ahead: number | null;
+  ref_tyre_life: number | null;
+  ref_track_temp: number | null;
+};
+
 export type ExperimentResultRow = {
   id: number;
   scheme: Scheme;
@@ -219,6 +243,7 @@ export type Database = {
       lap_telemetry: ReadOnlyTable<LapTelemetryRow>;
       model_runs: ReadOnlyTable<ModelRunRow>;
       lap_predictions: ReadOnlyTable<LapPredictionRow>;
+      prediction_factors: ReadOnlyTable<PredictionFactorRow>;
       experiment_results: ReadOnlyTable<ExperimentResultRow>;
     };
     Views: { [_ in never]: never };

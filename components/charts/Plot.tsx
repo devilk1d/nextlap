@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { niceTicks, percentOf } from "@/lib/stats";
 
 type Props = {
-  height: number;
+  /** Fixed height in px; leave out and size it through `className` (e.g. `flex-1`) to fill a card. */
+  height?: number;
   yMin: number;
   yMax: number;
   yFormat: (value: number) => string;
@@ -34,7 +35,7 @@ export function Plot({
     (v) => v >= Math.min(yMin, yMax) - 1e-9 && v <= Math.max(yMin, yMax) + 1e-9,
   );
   return (
-    <div className={`relative ${className}`} style={{ height }}>
+    <div className={`relative ${className}`} style={height === undefined ? undefined : { height }}>
       {lines.map((value) => (
         <div
           key={value}

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Segmented";
-import { fmtLap, fmtLapAxis, fmtSigned, stripGrandPrix } from "@/lib/format";
+import { fmtLap, fmtLapAxis, fmtSigned } from "@/lib/format";
 import { EVENT, tyreOf } from "@/lib/race/constants";
 import {
   FORECAST_WARMUP_LAPS,
@@ -16,7 +15,6 @@ import { clamp } from "@/lib/stats";
 import { linePath } from "@/lib/svg";
 import { useRace } from "@/features/dashboard/race-context";
 import { lapChart, neutralisedCount } from "./chart-data";
-import { exportChartPng, exportLapsCsv } from "./exports";
 import type { Focus } from "./focus";
 import { useReplay } from "./store";
 
@@ -92,10 +90,9 @@ export function LapChart({ x, focus }: Props) {
       ? hovered.time - hovered.predicted
       : null;
   const hoverX = hover === null ? 0 : X(hover);
-  const context = { run, grandPrix: stripGrandPrix(race.event_name), year: race.year };
 
   return (
-    <section className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-0">
+    <section className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[290px]">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-divider px-3.5 py-[9px]">
         <span className="text-[13px] font-semibold">Lap times</span>
         <span className="whitespace-nowrap text-[11.5px] text-ink-mute">
@@ -141,20 +138,6 @@ export function LapChart({ x, focus }: Props) {
               })),
             ]}
           />
-        </div>
-        <div className="flex gap-1.5">
-          <Button
-            title="Download the lap table as CSV"
-            onClick={() => exportLapsCsv(context, completed)}
-          >
-            ↓ CSV
-          </Button>
-          <Button
-            title="Download this chart as an image"
-            onClick={() => exportChartPng(context, chart, scopeName)}
-          >
-            ↓ PNG
-          </Button>
         </div>
       </div>
 

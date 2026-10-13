@@ -23,6 +23,24 @@ export async function getRaceBundle(raceId: number, modelRunId?: number): Promis
   return { entries, laps, predictions };
 }
 
+/** How each stored prediction of one run on one race splits into feature-group contributions. */
+export async function getRunFactors(raceId: number, modelRunId: number) {
+  "use cache";
+  cacheLife("hours");
+  return fetchAll((from, to) =>
+    db()
+      .from("prediction_factors")
+      .select(
+        "driver_code, lap_number, window_mean_sec, baseline_shift, c_pace, c_progress, c_telemetry, c_tyres, c_weather, c_traffic, c_track, ref_gap_ahead, ref_tyre_life, ref_track_temp",
+      )
+      .eq("race_id", raceId)
+      .eq("model_run_id", modelRunId)
+      .order("driver_code")
+      .order("lap_number")
+      .range(from, to),
+  );
+}
+
 /** Stored predictions of one run on one race (primary-key prefix, so it stays fast). */
 export async function getRunPredictions(raceId: number, modelRunId: number) {
   "use cache";

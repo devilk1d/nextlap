@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { RollingText } from "@/components/ui/RollingText";
 import { cn } from "@/components/ui/cn";
 import { fmtGap, fmtLap, fmtLapsDown, fmtSigned, fmtTimer } from "@/lib/format";
@@ -20,6 +20,7 @@ import { PIT_PHASE_LABEL } from "@/lib/race/pit";
 import type { Standing } from "@/lib/race/timeline";
 import { useRace } from "@/features/dashboard/race-context";
 import type { Focus } from "./focus";
+import { useForecastWhy } from "./ForecastWhy";
 
 const GO = "var(--color-go)";
 /** How long a finished lap stays on the bar before the next lap starts (race seconds). */
@@ -41,18 +42,22 @@ function raceNote(x: Standing, leaderCode: string): string {
     if (x.position === 1) return "Race winner";
     return `${x.lapsDown >= 1 ? fmtLapsDown(x.lapsDown) : `${fmtGap(x.toLeader)} s`} behind ${leaderCode}`;
   }
-  return `${tyreOf(x.lap.compound).name} · ${x.lap.tyre_life ?? "–"} laps old`;
+  return `${tyreOf(x.lap.compound).name} · ${x.lap.tyre_life ?? "–"} laps`;
 }
 
-function Cell({
+export function Cell({
   className,
   children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
+  ...rest
+}: { className?: string; children: ReactNode } & Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "className" | "children"
+> & {
+    ref?: Ref<HTMLDivElement>;
+  }) {
   return (
     <div
+      {...rest}
       className={cn(
         "flex min-w-0 flex-col justify-center border-r border-hairline px-3 py-2 last:border-r-0",
         className,
@@ -174,9 +179,7 @@ export function ForecastBar({ x, focus, time, leaderCode }: Props) {
 
   // Like the TV graphic: a finished lap stays on screen for a few seconds with its lap time.
   const holding =
-    lastLap !== null &&
-    completed >= 1 &&
-    (!live || time - run.cum[completed] < LAP_HOLD_SECONDS);
+    lastLap !== null && completed >= 1 && (!live || time - run.cum[completed] < LAP_HOLD_SECONDS);
   const shown = holding && lastLap ? lastLap : x.lap;
   const lapTone = holding && lastLap ? lapToneOf(timeline, run, lastLap.lap_number) : "white";
   const sectorTimes = [shown.sector1_time_sec, shown.sector2_time_sec, shown.sector3_time_sec];
@@ -198,10 +201,10 @@ export function ForecastBar({ x, focus, time, leaderCode }: Props) {
           ? fmtLap(predicted)
           : "No forecast";
   const headlineLabel = done
-    ? "Final classification"
+    ? "Result"
     : reveal && lastLap
       ? `L${lastLap.lap_number} lap time`
-      : "Forecast for this lap";
+      : "Forecast";
   const flash =
     reveal && lapTone === "purple"
       ? "color-mix(in srgb, var(--color-best) 45%, transparent)"
@@ -220,15 +223,23 @@ export function ForecastBar({ x, focus, time, leaderCode }: Props) {
       ? `Forecast ${fmtLap(lastPredicted)} · ${fmtSigned(lastDelta)} s`
       : "No forecast was made"
     : reason
-      ? `${reason.title}${
-          reason.progress ? ` · ${reason.progress.have} of ${reason.progress.need}` : ""
-        }${next ? ` · next lap ${next.lap_number}` : ""}`
+      ? `${reason.title}${reason.progress ? ` ${reason.progress.have}/${reason.progress.need}` : ""}`
       : raceNote(x, leaderCode);
-  const subTitle = reason ? `${reason.title}. ${reason.text}` : undefined;
+  const subTitle = reason
+    ? `${reason.title}. ${reason.text}${next ? ` Next forecast: lap ${next.lap_number}.` : ""}`
+    : undefined;
+
+  // The strip explains the forecast of the lap being shown: the lap that just finished while its
+  // time is on screen, otherwise the lap in progress.
+  const why = useForecastWhy(x, reveal && lastLap ? lastLap.lap_number : lapNumber);
 
   return (
     <div className="relative z-[2] flex items-stretch border-t border-divider bg-[rgba(22,22,25,.96)]">
-      <Cell className="w-[168px] shrink-0">
+      <Cell
+        {...(why?.cellProps ?? {})}
+        className={cn("relative w-[168px] shrink-0", why && "cursor-help")}
+      >
+        {why?.node}
         <span className={LABEL}>{headlineLabel}</span>
         <span className="mt-1 flex h-[28px] items-center" style={{ color: headlineColor }}>
           <RollingText
@@ -278,9 +289,7 @@ export function ForecastBar({ x, focus, time, leaderCode }: Props) {
         </span>
       </Cell>
 
-      <Cell
-        className="shrink-0"
-      >
+      <Cell className="shrink-0">
         <span className={LABEL}>{lastLap ? `Last lap L${lastLap.lap_number}` : "Last lap"}</span>
         <span
           className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap leading-none"

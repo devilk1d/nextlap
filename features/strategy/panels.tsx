@@ -22,10 +22,13 @@ export function DegradationChart({
   points,
   fits,
   focusCode,
+  fill = false,
 }: {
   points: DegradationPoint[];
   fits: CompoundFits;
   focusCode: string;
+  /** Take the height of the card (which must be a flex column) instead of a fixed 230 px. */
+  fill?: boolean;
 }) {
   if (points.length < 8) {
     return (
@@ -41,8 +44,16 @@ export function DegradationChart({
   const toX = (age: number) => percentOf(age, 0, ageMax);
 
   return (
-    <div>
-      <Plot height={230} yMin={yMin} yMax={yMax} yFormat={fmtLapAxis}>
+    <div className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}>
+      <Plot
+        height={fill ? undefined : 230}
+        className={
+          fill ? "mx-2 mb-6 mt-1.5 ml-[52px] min-h-[100px] flex-1" : "mx-2 mb-6 mt-1.5 ml-[52px]"
+        }
+        yMin={yMin}
+        yMax={yMax}
+        yFormat={fmtLapAxis}
+      >
         {(toY) => (
           <>
             {niceTicks(0, ageMax, 6).map((age) => (
@@ -126,11 +137,20 @@ export function DegradationChart({
   );
 }
 
-export function PitStopsTable({ stops, focusCode }: { stops: PitStop[]; focusCode: string }) {
+export function PitStopsTable({
+  stops,
+  focusCode,
+  fill = false,
+}: {
+  stops: PitStop[];
+  focusCode: string;
+  /** Scroll inside the height of the card (a flex column) instead of a 320 px cap. */
+  fill?: boolean;
+}) {
   if (!stops.length) return <div className="text-[12px] text-ink-mute">No pit stops yet.</div>;
   const fastest = Math.min(...stops.map((s) => s.laneSeconds ?? Infinity));
   return (
-    <div className="max-h-[320px] overflow-auto">
+    <div className={fill ? "min-h-0 flex-1 overflow-auto" : "max-h-[320px] overflow-auto"}>
       <Table>
         <thead>
           <tr>
@@ -194,7 +214,7 @@ export function TeamPitLane({ teams }: { teams: TeamPit[] }) {
   const hi = Math.max(...teams.map((t) => t.median)) + 0.5;
   return (
     <div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         {teams.map((team, i) => (
           <div
             key={team.team}

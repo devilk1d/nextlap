@@ -1,42 +1,28 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { RollingText } from "@/components/ui/RollingText";
 import { cn } from "@/components/ui/cn";
 import { fmtTimer } from "@/lib/format";
-import { sampleTelemetry } from "@/lib/race/telemetry";
 import type { Standing } from "@/lib/race/timeline";
-import { useRace } from "@/features/dashboard/race-context";
-import type { Focus } from "./focus";
-import { useDriverTelemetry } from "./useTelemetry";
+import {
+  BRAKE_COLOR,
+  clamp01,
+  FIGURE,
+  Figure,
+  LABEL,
+  SPEED_COLOR,
+  SPEED_MAX,
+  sweep,
+  THROTTLE_COLOR,
+  whole,
+} from "./car-bits";
+import { useCarReading } from "./useCarReading";
 
 type Props = {
   x: Standing;
-  focus: Focus;
   /** Replay clock, race seconds. */
   time: number;
 };
-
-const SPEED_MAX = 360;
-const SPEED_COLOR = "#2b6bff";
-const THROTTLE_COLOR = "var(--color-go)";
-const BRAKE_COLOR = "var(--color-stop)";
-
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-const whole = (value: number | null | undefined) => (value == null ? "—" : String(Math.round(value)));
-
-/** The fill and the mark of a bar share one transition, so the mark can never drift off its fill. */
-const sweep = (live: boolean, property: "width" | "left" | "height") =>
-  `${property} ${live ? "90ms linear" : "600ms cubic-bezier(.2,.8,.2,1)"}`;
-
-/** A number that rolls when it changes, or plain when it follows a live feed. */
-function Figure({ value, live, className }: { value: string; live: boolean; className?: string }) {
-  return live ? (
-    <span className={cn("inline-block tabular-nums", className)}>{value}</span>
-  ) : (
-    <RollingText value={value} className={className} />
-  );
-}
 
 /** A bar filled to `share` (0..1), with an optional white mark at `mark` (0..1). */
 function Meter({
@@ -63,15 +49,15 @@ function Meter({
       {mark !== undefined && (
         <div
           className="absolute -top-[3px] h-[12px] w-[2px] rounded-full bg-white"
-          style={{ left: `calc(${clamp01(mark) * 100}% - 1px)`, transition: sweep(live, "left") }}
+          style={{
+            left: `calc(${clamp01(mark) * 100}% - 1px)`,
+            transition: sweep(live, "left"),
+          }}
         />
       )}
     </div>
   );
 }
-
-const LABEL = "whitespace-nowrap text-[11px] leading-none text-ink-mute";
-const FIGURE = "font-cond font-semibold leading-none";
 
 /**
  * A pedal as a tall column that fills from the bottom, like the pedal itself, with its name and
@@ -122,23 +108,10 @@ function PedalColumn({
  * throttle and brake bars, DRS and gear. It follows the replay clock when the race has a
  * telemetry file, and shows the averages of the last lap otherwise.
  */
-export function CarData({ x, focus, time }: Props) {
-  const { race } = useRace();
-  const file = useDriverTelemetry(race.year, race.event_name, x.run.driver_code);
-  const elapsed = time - x.run.cum[x.currentLap - 1];
-  const sample =
-    file && !x.done && !x.retired ? sampleTelemetry(file, x.currentLap, elapsed) : null;
-  const live = sample !== null;
-  const lap = focus.lastLap ?? focus.currentLap;
+export function CarData({ x, time }: Props) {
+  const { live, elapsed, lap, speed, topSpeed, throttle, brakeShare, rpm, gear, drs } =
+    useCarReading(x, time);
   const surname = (x.run.name.split(" ").at(-1) ?? x.run.name).toUpperCase();
-
-  const speed = sample ? sample.speed : (lap.tel_speed_mean ?? null);
-  const topSpeed = sample ? sample.topSpeed : (lap.tel_speed_max ?? null);
-  const throttle = sample ? sample.throttle : (lap.tel_throttle_mean ?? null);
-  const brakeShare = sample ? (sample.brake ? 1 : 0) : (lap.tel_pct_braking ?? 0) / 100;
-  const rpm = sample ? sample.rpm : (lap.tel_rpm_mean ?? null);
-  const gear = sample ? sample.gear : (lap.tel_n_gear_mode ?? null);
-  const drs = sample ? sample.drs : (lap.tel_pct_drs_open ?? 0) > 0;
 
   const caption = live
     ? "Live car data · white mark = top speed so far in the lap"

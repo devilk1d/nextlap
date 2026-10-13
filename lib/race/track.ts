@@ -78,6 +78,13 @@ export function segmentPath(path: TrackPath, f0: number, f1: number): string {
 export const closedPath = (path: TrackPath) =>
   `M${[...path.points, path.points[0]].map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L")}`;
 
+const MARGIN = 4;
+
 export function trackView({ w, h }: TrackGeometry) {
-  return { viewBox: `-9 -9 ${w + 18} ${h + 18}`, scale: 0.42 + (0.38 * h) / 100 };
+  // A fixed margin is a big share of a flat circuit (Monza is ~50 units tall); the SVG overflows
+  // visibly, so markers and labels at the edge are not cut.
+  return {
+    viewBox: `-${MARGIN} -${MARGIN} ${w + 2 * MARGIN} ${h + 2 * MARGIN}`,
+    scale: 0.42 + (0.38 * h) / 100,
+  };
 }
