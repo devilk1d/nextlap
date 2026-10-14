@@ -2,7 +2,7 @@
 
 import useSWR, { type SWRConfiguration } from "swr";
 import type { getRaceFactors } from "@/server/races/service";
-import type { RaceDetail } from "@/server/races/types";
+import type { RaceDetail, RaceSummary } from "@/server/races/types";
 
 async function fetcher<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -30,3 +30,7 @@ export const useRaceFactors = (raceId: number | null, enabled = true) =>
     fetcher,
     STATIC_DATA,
   );
+
+/** Result facts of one race (winner, pole, fastest lap, classification) without its laps. */
+export const useRaceSummary = (raceId: number | null) =>
+  useSWR<RaceSummary>(raceId ? `/api/races/${raceId}/summary` : null, fetcher, STATIC_DATA);

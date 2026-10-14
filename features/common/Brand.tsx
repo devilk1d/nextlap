@@ -4,6 +4,7 @@ import Image from "next/image";
 import { createContext, useContext } from "react";
 import { cn } from "@/components/ui/cn";
 import { DRIVER_PHOTO_YEARS, TEAM_LOGO_FILES } from "@/lib/brand-assets.generated";
+import { HEADSHOT_METRICS } from "@/lib/headshot-metrics.generated";
 
 /** Season of the selected race: drivers change team and photo between seasons. */
 const SeasonContext = createContext<number | null>(null);
@@ -26,6 +27,23 @@ export function teamLogoSrc(team: string, year: number | null): string | null {
   if (!files || !years.length) return null;
   const use = closestYear(years, year ?? years[years.length - 1]);
   return `/img/teams/${use}/${files[use]}.png`;
+}
+
+/**
+ * Places the head of a headshot in the middle of the avatar at a common size: the photos are
+ * cropped differently (and some drivers pose turned), so each one is shifted and scaled by the
+ * position and width of its head, measured by `scripts/assets/measure_headshots.mjs`.
+ */
+function faceTransform(src: string): { transform: string; transformOrigin: string } {
+  const key = /drivers\/(\d+\/[A-Z0-9]+)\.png/.exec(src)?.[1];
+  const [cx, top, width] = (key && HEADSHOT_METRICS[key]) || [0.5, 0.04, 0.4];
+  const scale = Math.min(1.7, Math.max(1.3, 0.56 / width));
+  const dx = (0.5 - cx) * 100;
+  const dy = (0.08 / scale - top) * 100;
+  return {
+    transform: `scale(${scale.toFixed(3)}) translate(${dx.toFixed(2)}%, ${dy.toFixed(2)}%)`,
+    transformOrigin: "50% 0",
+  };
 }
 
 type FaceProps = {
@@ -65,7 +83,8 @@ export function DriverFace({ code, color, size, square, eager, className }: Face
           loading={eager ? "eager" : "lazy"}
           width={Math.ceil(size * 1.5)}
           height={Math.ceil(size * 1.5)}
-          className="absolute inset-0 size-full origin-top scale-[1.45] object-cover object-top"
+          className="absolute inset-0 size-full object-cover object-top"
+          style={faceTransform(src)}
         />
       ) : (
         <span className="absolute inset-0 grid place-items-center text-[10px] font-bold">

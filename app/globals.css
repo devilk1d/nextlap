@@ -129,3 +129,98 @@
   }
 }
 
+/* Landing page: circuit cards lift into a spinning 3D slab on hover (no JavaScript). */
+.c3d-scene {
+  perspective: 420px;
+}
+.c3d-stack {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.35s ease;
+}
+.c3d-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  transform: translateZ(calc(var(--i, 0) * 1.7px));
+}
+.c3d-extra {
+  display: none;
+}
+.c3d-card[data-on="true"] .c3d-extra,
+.c3d-card:hover .c3d-extra,
+.c3d-card:focus-visible .c3d-extra {
+  display: block;
+}
+.c3d-card[data-on="true"] .c3d-stack {
+  transform: rotateX(58deg) rotateZ(30deg);
+}
+.c3d-card:hover .c3d-stack,
+.c3d-card:focus-visible .c3d-stack {
+  animation: c3d-spin 6s linear infinite;
+}
+@keyframes c3d-spin {
+  from {
+    transform: rotateX(58deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(58deg) rotateZ(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .c3d-card:hover .c3d-stack {
+    animation: none;
+    transform: rotateX(58deg) rotateZ(30deg);
+  }
+}
+
+/* Landing page layout: stacked on narrow screens, three columns when wide. */
+.landing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  min-height: 100vh;
+}
+.landing-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.landing-stage {
+  min-height: 420px;
+}
+@media (min-width: 1180px) {
+  .landing {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .landing-grid {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: 340px minmax(0, 1fr) 360px;
+  }
+}
+
+/* Strategy page: the first row (the field's Gantt) is tall enough for every driver. */
+@media (min-width: 1180px) {
+  .strategy-grid {
+    grid-template-rows: minmax(var(--gantt-min, 430px), 1fr) auto;
+  }
+}
+
+/* Collapsed Gantt: its header on top, the degradation chart below it and the other cards in one
+   column beside both. */
+@media (min-width: 1180px) {
+  .strategy-grid[data-collapsed="true"] {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .strategy-grid[data-collapsed="true"] .sg-degradation {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .strategy-grid[data-collapsed="true"] .sg-right {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}

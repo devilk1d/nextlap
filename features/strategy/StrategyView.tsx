@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Legend } from "@/components/ui/Legend";
 import { Swatch, TeamBar } from "@/components/ui/Swatch";
@@ -17,7 +19,7 @@ const ROW = "grid grid-cols-[46px_minmax(0,1fr)_44px] items-stretch gap-2";
  * Strategy of the whole field, one bar per driver. The rows share the height of the card (between
  * 18 and 28 px each), so twenty drivers fit without the page growing.
  */
-function Gantt() {
+function Gantt({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const { timeline, driver, setDriver } = useRace();
   const frame = useFrame();
   const total = timeline.totalLaps;
@@ -29,9 +31,22 @@ function Gantt() {
   return (
     <Card
       title="Race strategy · full field"
-      sub={`Sorted by current position · click a row to select · lap ${frame.leaderLap}/${total}`}
+      // sub={`Sorted by current position · click a row to select · lap ${frame.leaderLap}/${total}`}
       className="min-h-0"
-      bodyClassName="flex min-h-0 flex-col py-2.5"
+      bodyClassName={cn("flex min-h-0 flex-col py-2.5", collapsed && "hidden")}
+      actions={
+        <Button
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          title={
+            collapsed
+              ? "Show the strategy of the whole field"
+              : "Hide it to give room to the charts below"
+          }
+        >
+          {collapsed ? "Expand ▾" : "Collapse ▴"}
+        </Button>
+      }
     >
       <div
         className={cn(ROW, "shrink-0 pb-1 text-[10px] font-bold tracking-[.06em] text-ink-mute")}
@@ -157,31 +172,60 @@ export function StrategyView() {
   const fits = compoundFits(points);
   const stops = pitStops(frame, timeline);
   const focus = frame.byCode.get(driver.driver_code);
+  // The Gantt needs room for every driver (19 px a row plus the card's own chrome); a smaller
+  // window scrolls instead of cutting the last rows off.
+  const ganttMin = Math.max(430, 130 + frame.standings.length * 19);
+  // Collapsing the field's Gantt leaves only its header: the tyre degradation chart takes the
+  // height, and the pit stops move beside it. The choice is remembered in this browser.
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem("nextlap.strategy.collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggle = () =>
+    setCollapsed((current) => {
+      try {
+        window.localStorage.setItem("nextlap.strategy.collapsed", current ? "0" : "1");
+      } catch {
+        /* the choice just is not remembered */
+      }
+      return !current;
+    });
+  const pitStopsCard = (
+    <Card
+      title="Pit stops"
+      // sub="Lane = PitOut − PitIn · loss = in-lap + out-lap vs median"
+      className={collapsed ? "min-h-[200px] flex-1" : "max-h-[420px] min-h-[220px] wide:max-h-none"}
+      bodyClassName="flex min-h-0 flex-col py-2"
+    >
+      <PitStopsTable stops={stops} focusCode={driver.driver_code} fill />
+    </Card>
+  );
 
   return (
-    <main className="grid min-h-0 min-w-0 grid-cols-1 gap-2 overflow-auto [grid-area:main] wide:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] wide:grid-rows-[minmax(430px,1fr)_auto]">
-      <Gantt />
-      <Card
-        title="Pit stops"
-        sub="Lane = PitOut − PitIn · loss = in-lap + out-lap vs median"
-        className="max-h-[420px] min-h-[220px] wide:max-h-none"
-        bodyClassName="flex min-h-0 flex-col py-2"
-      >
-        <PitStopsTable stops={stops} focusCode={driver.driver_code} fill />
-      </Card>
+    <main
+      className="strategy-grid grid min-h-0 min-w-0 grid-cols-1 gap-2 overflow-auto [grid-area:main] wide:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]"
+      data-collapsed={collapsed}
+      style={{ ["--gantt-min" as string]: `${ganttMin}px` }}
+    >
+      <Gantt collapsed={collapsed} onToggle={toggle} />
+      {!collapsed && pitStopsCard}
       <Card
         title="Tyre degradation"
-        sub="Fuel-corrected lap time vs tyre life · clean laps so far"
-        className="min-h-[300px]"
+        // sub="Time lost as the tyres age · clean laps so far"
+        className="sg-degradation min-h-[300px]"
         bodyClassName="flex min-h-0 flex-col py-2"
       >
         <DegradationChart points={points} fits={fits} focusCode={driver.driver_code} fill />
       </Card>
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="sg-right flex min-w-0 flex-col gap-2">
+        {collapsed && pitStopsCard}
         {focus && (
           <Card
             title={`${driver.driver_code} · stints so far`}
-            sub="Wear = s per lap of tyre life, fuel-corrected"
+            // sub="Wear = s per lap of tyre life, fuel-corrected"
             className="flex-none"
             bodyClassName="py-2"
           >
@@ -190,7 +234,7 @@ export function StrategyView() {
         )}
         <Card
           title="Compounds"
-          sub="Field-wide · wear per lap, fuel-corrected"
+          // sub="Field-wide · wear per lap, fuel-corrected"
           className="flex-none"
           bodyClassName="py-2"
         >

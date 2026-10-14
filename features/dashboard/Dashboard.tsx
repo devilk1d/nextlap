@@ -11,6 +11,7 @@ import { StrategyView } from "@/features/strategy/StrategyView";
 import { useReplay } from "@/features/replay/store";
 import { usePlayback } from "@/features/replay/usePlayback";
 import { SeasonProvider } from "@/features/common/Brand";
+import { Landing } from "@/features/landing/Landing";
 import { Header } from "./Header";
 import { RaceProvider } from "./race-context";
 import { defaultRace, raceForSeason, useSelection, type View } from "./selection";
@@ -22,7 +23,9 @@ const TRANSPORT_VIEWS: View[] = ["replay", "h2h", "strat"];
 export function Dashboard({ races }: { races: RaceInfo[] }) {
   const [selection, update] = useSelection();
   const race = races.find((r) => r.race_id === selection.raceId) ?? defaultRace(races);
-  const raceId = race?.predictable ? race.race_id : null;
+  // The landing page shows until a race is chosen (`?race=` in the URL).
+  const landing = selection.raceId === null;
+  const raceId = !landing && race?.predictable ? race.race_id : null;
   const { data: detail, error, isLoading } = useRaceDetail(raceId);
 
   const timeline = useMemo(() => (detail ? buildTimeline(detail) : null), [detail]);
@@ -31,6 +34,15 @@ export function Dashboard({ races }: { races: RaceInfo[] }) {
   useEffect(() => {
     if (timeline) useReplay.getState().load(timeline.end, 0);
   }, [timeline]);
+
+  if (landing && races.length) {
+    return (
+      <Landing
+        races={races}
+        onStart={(raceId, driver) => update({ raceId, driver, view: null, a: null, b: null })}
+      />
+    );
+  }
 
   if (!race) {
     return (
@@ -66,6 +78,7 @@ export function Dashboard({ races }: { races: RaceInfo[] }) {
           race={race}
           view={view}
           onView={(next) => update({ view: next === "replay" ? null : next })}
+          onHome={() => update({ raceId: null, driver: null, view: null, a: null, b: null })}
           onSeason={(year) => {
             const next = raceForSeason(races, year, race.circuit_key);
             if (next) selectRace(next.race_id);
