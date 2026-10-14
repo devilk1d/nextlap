@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { Segmented } from "@/components/ui/Segmented";
 import { cn } from "@/components/ui/cn";
@@ -24,6 +25,7 @@ type Props = {
   race: RaceInfo;
   view: View;
   onView: (view: View) => void;
+  onHome: () => void;
   onSeason: (year: number) => void;
   onRace: (raceId: number) => void;
   runs: Run[];
@@ -31,6 +33,78 @@ type Props = {
   onDriver: (code: string) => void;
   loading: boolean;
 };
+
+/** Races of the season, with a search box that filters by name, country code or date. */
+function RaceMenu({
+  races,
+  currentId,
+  onPick,
+}: {
+  races: RaceInfo[];
+  currentId: number;
+  onPick: (raceId: number) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const shown = races.filter(
+    (item) =>
+      !q ||
+      `${item.event_name} ${item.circuit.short_name} ${item.circuit.country_code ?? ""} ${item.country} ${fmtDate(item.event_date)}`
+        .toLowerCase()
+        .includes(q),
+  );
+
+  return (
+    <>
+      <div className="sticky top-0 z-10 -mx-1.5 -mt-1.5 bg-inset px-1.5 pb-1.5 pt-1.5">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search race or country"
+          aria-label="Search race or country"
+          autoFocus
+          className="w-full rounded-lg border border-control bg-raised px-2.5 py-[7px] text-[12.5px] text-ink outline-none placeholder:text-ink-mute focus:border-accent"
+        />
+      </div>
+      {shown.map((item) => {
+        const active = item.race_id === currentId;
+        return (
+          <button
+            key={item.race_id}
+            type="button"
+            onClick={() => onPick(item.race_id)}
+            className={cn(
+              "grid w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border-0 px-2.5 py-[9px] text-left text-[12.5px]",
+              item.predictable ? "text-ink" : "text-ink-mute",
+              active ? "bg-accent/14" : "bg-transparent",
+            )}
+          >
+            <span
+              className={cn(
+                "text-[10.5px] font-bold tracking-[.06em]",
+                active ? "text-accent" : "text-ink-mute",
+              )}
+            >
+              {item.circuit.country_code ?? `R${item.round_number}`}
+            </span>
+            <span className="font-semibold">
+              {stripGrandPrix(item.event_name)}
+              {item.predictable
+                ? ""
+                : item.exclusion_reason === "wet"
+                  ? " · wet"
+                  : " · not modelled"}
+            </span>
+            <span className="text-[11px] text-ink-mute">{fmtDate(item.event_date)}</span>
+          </button>
+        );
+      })}
+      {!shown.length && (
+        <div className="px-2.5 py-3 text-[12px] text-ink-mute">No race matches this search.</div>
+      )}
+    </>
+  );
+}
 
 function ReplayStatus() {
   const playing = useReplay((s) => s.playing);
@@ -70,6 +144,7 @@ export function Header({
   race,
   view,
   onView,
+  onHome,
   onSeason,
   onRace,
   runs,
@@ -84,7 +159,12 @@ export function Header({
 
   return (
     <header className="relative z-50 flex min-h-[52px] flex-wrap items-center gap-x-[18px] gap-y-2.5 rounded-xl border border-line bg-panel px-3.5 py-2 [grid-area:head]">
-      <div className="flex items-center gap-2.5">
+      <button
+        type="button"
+        onClick={onHome}
+        title="Back to the start page"
+        className="flex cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 text-ink"
+      >
         <div className="flex -skew-x-20 gap-[3px]">
           <span className="h-[18px] w-1 bg-accent" />
           <span className="h-[18px] w-1 bg-accent opacity-70" />
@@ -94,7 +174,7 @@ export function Header({
         <span className="rounded border border-popover px-1.5 py-0.5 text-[10px] font-semibold tracking-[.08em] text-ink-mute">
           PREDICTOR
         </span>
-      </div>
+      </button>
 
       <Segmented
         value={view}
@@ -122,44 +202,16 @@ export function Header({
             </>
           }
         >
-          {(close) =>
-            seasonRaces.map((item) => {
-              const active = item.race_id === race.race_id;
-              return (
-                <button
-                  key={item.race_id}
-                  type="button"
-                  onClick={() => {
-                    onRace(item.race_id);
-                    close();
-                  }}
-                  className={cn(
-                    "grid w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border-0 px-2.5 py-[9px] text-left text-[12.5px]",
-                    item.predictable ? "text-ink" : "text-ink-mute",
-                    active ? "bg-accent/14" : "bg-transparent",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "text-[10.5px] font-bold tracking-[.06em]",
-                      active ? "text-accent" : "text-ink-mute",
-                    )}
-                  >
-                    {item.circuit.country_code ?? `R${item.round_number}`}
-                  </span>
-                  <span className="font-semibold">
-                    {stripGrandPrix(item.event_name)}
-                    {item.predictable
-                      ? ""
-                      : item.exclusion_reason === "wet"
-                        ? " · wet"
-                        : " · not modelled"}
-                  </span>
-                  <span className="text-[11px] text-ink-mute">{fmtDate(item.event_date)}</span>
-                </button>
-              );
-            })
-          }
+          {(close) => (
+            <RaceMenu
+              races={seasonRaces}
+              currentId={race.race_id}
+              onPick={(raceId) => {
+                onRace(raceId);
+                close();
+              }}
+            />
+          )}
         </Dropdown>
 
         {showDriver && (

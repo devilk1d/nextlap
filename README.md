@@ -122,6 +122,14 @@ pesan error. Run lain (mis. generalisasi) selalu dari Supabase. Respons `/api/ra
   [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (GeoJSON, lisensi MIT). Sirkuit
   baru ditambahkan dengan `python scripts/build_track_geometry.py`. Titik awal garis = garis
   start/finish menurut sumber tersebut; untuk 15 sirkuit non-studi posisinya belum dicek manual.
+- `data/track-elevation.json`: jejak balap nyata tiap sirkuit (X, Y, Z dalam meter) dari
+  `position_data` cache FastF1, lap tercepat balapan kering terbaru. Dibuat dengan
+  `scripts/build_track_elevation.py`; X/Y diputar ke bingkai `track-geometry.json` (orientasi peta
+  resmi F1) sehingga 3D dan peta 2D sama. Rentang tinggi cocok dengan `Circ_AltRange_m`.
+- `scripts/align_track_start.py` memeriksa arah lap dan menaruh titik awal tiap garis di
+  `track-geometry.json` tepat di garis waktu (start/finish) berdasarkan jejak balap nyata itu.
+  Pemeriksaan terakhir: 25 sirkuit searah lap nyata; titik awal Monte Carlo sebelumnya meleset
+  24 % dari lap dan sudah dikoreksi (14 garis digeser, koordinat tidak berubah).
 - `circuits.official_name`, `country_code`, `length_km` sudah terisi untuk semua sirkuit
   (`supabase/fill_circuit_metadata.sql`).
 - `public/img/drivers/{tahun}/{KODE}.png` dan `public/img/teams/{tahun}/{slug}.png`: foto pembalap
