@@ -66,7 +66,7 @@ function IntervalBar({ battle }: { battle: Battle }) {
             </span>
           </span>
           <span
-            title={trend.sub}
+            data-tip={trend.sub}
             className="min-w-0 truncate text-[11px] font-semibold"
             style={{ color: trend.color }}
           >
@@ -102,7 +102,10 @@ export function BattleHero({ battle, frame }: Props) {
   });
 
   return (
-    <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-line bg-stage">
+    <section
+      data-tour="h2h-battle"
+      className="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-line bg-stage"
+    >
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -119,7 +122,7 @@ export function BattleHero({ battle, frame }: Props) {
       <div className="relative flex min-h-0 flex-1 p-2.5">
         <div
           className="relative min-w-0 flex-1"
-          title="Labels on the circuit: the faster driver in each sector on the median clean lap, and by how much"
+          data-tip="Labels on the circuit: the faster driver in each sector on the median clean lap, and by how much"
         >
           <TrackPanel
             geometry={geometry}

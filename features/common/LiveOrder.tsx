@@ -152,7 +152,10 @@ export function LiveOrder({ standings, highlight, onPick }: Props) {
   const index = new Map(standings.map((s, i) => [s.run.driver_code, i]));
 
   return (
-    <section className="flex-none overflow-hidden rounded-xl border border-line bg-panel">
+    <section
+      data-tour="order"
+      className="flex-none overflow-hidden rounded-xl border border-line bg-panel"
+    >
       <style href="live-order" precedence="default">
         {CSS}
       </style>

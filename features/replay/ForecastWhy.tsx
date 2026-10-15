@@ -8,6 +8,8 @@ import { fmtLap } from "@/lib/format";
 import { tyreOf } from "@/lib/race/constants";
 import type { Standing } from "@/lib/race/timeline";
 import { useRace } from "@/features/dashboard/race-context";
+import { TOUR_STEPS } from "@/features/tour/steps";
+import { useTour } from "@/features/tour/store";
 
 const FASTER = "var(--color-go)";
 const SLOWER = "var(--color-stop)";
@@ -74,6 +76,22 @@ export function useForecastWhy(
     document.addEventListener("mousedown", away);
     return () => document.removeEventListener("mousedown", away);
   }, [pinned]);
+
+  const locate = () => {
+    const box = cell.current?.getBoundingClientRect();
+    if (!box) return;
+    setPlace({
+      left: Math.max(8, Math.min(box.left, window.innerWidth - 356)),
+      bottom: window.innerHeight - box.top + 8,
+      room: Math.max(160, box.top - 16),
+    });
+  };
+
+  // The guided tour shows this popover by itself on its "Why this number?" step.
+  const touring = useTour((s) => s.open && TOUR_STEPS[s.step]?.target === "why");
+  useEffect(() => {
+    if (touring) locate();
+  }, [touring, row]);
 
   if (!row) return null;
 
@@ -179,14 +197,7 @@ export function useForecastWhy(
   }
 
   const show = () => {
-    const box = cell.current?.getBoundingClientRect();
-    if (box) {
-      setPlace({
-        left: Math.max(8, Math.min(box.left, window.innerWidth - 356)),
-        bottom: window.innerHeight - box.top + 8,
-        room: Math.max(160, box.top - 16),
-      });
-    }
+    locate();
     setOpen(true);
   };
   const hide = () => {
@@ -231,7 +242,7 @@ export function useForecastWhy(
           />
         ))}
       </span>
-      {open &&
+      {(open || touring) &&
         typeof document !== "undefined" &&
         createPortal(
           <div
@@ -239,7 +250,9 @@ export function useForecastWhy(
             role="dialog"
             aria-label="Why this forecast"
             className={cn(
-              "fixed z-[100] w-[340px] max-w-[calc(100vw-16px)] overflow-y-auto rounded-xl border border-popover bg-tooltip px-3.5 py-3 text-[12px] shadow-[0_12px_30px_rgba(0,0,0,.5)]",
+              "fixed w-[340px] max-w-[calc(100vw-16px)] overflow-y-auto rounded-xl border border-popover bg-tooltip px-3.5 py-3 text-[12px] shadow-[0_12px_30px_rgba(0,0,0,.5)]",
+              // Above the tour's dimming layer (z-250) while the tour is explaining it.
+              touring ? "z-[280]" : "z-[100]",
               pinned ? "pointer-events-auto" : "pointer-events-none",
             )}
             style={{ left: place.left, bottom: place.bottom, maxHeight: place.room }}

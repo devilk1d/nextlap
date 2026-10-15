@@ -54,7 +54,7 @@ export function Summary({ battle }: { battle: Battle }) {
   const quicker = medianA !== null && medianB !== null ? (medianB > medianA ? a : b) : null;
 
   return (
-    <>
+    <div data-tour="h2h-summary" className="flex flex-[1_0_auto] flex-col gap-2">
       <section className="flex-none overflow-hidden rounded-xl border border-line bg-panel p-4">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-bold tracking-[.1em] text-accent">
@@ -116,6 +116,6 @@ export function Summary({ battle }: { battle: Battle }) {
           </div>
         ))}
       </section>
-    </>
+    </div>
   );
 }

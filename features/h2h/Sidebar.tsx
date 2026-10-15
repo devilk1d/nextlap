@@ -88,7 +88,7 @@ function DriverCard({ slot, x, lineColor, runs, otherCode, totalLaps, onPick }: 
             <button
               key={candidate.driver_code}
               type="button"
-              title={candidate.name}
+              data-tip={candidate.name}
               disabled={disabled}
               onClick={() => onPick(candidate.driver_code)}
               className={cn(
@@ -138,7 +138,10 @@ export function Sidebar({
   onB: (code: string) => void;
 }) {
   return (
-    <aside className="flex min-h-0 flex-col overflow-auto rounded-xl border border-line bg-panel [grid-area:left]">
+    <aside
+      data-tour="h2h-drivers"
+      className="flex min-h-0 flex-col overflow-auto rounded-xl border border-line bg-panel [grid-area:left]"
+    >
       <DriverCard
         slot="A"
         x={a}

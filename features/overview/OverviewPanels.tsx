@@ -94,7 +94,14 @@ export function TeamPaceBars({ teams }: { teams: TeamPace[] }) {
         {teams.map((team, i) => (
           <div
             key={team.team}
-            title={`${team.team} · median ${fmtLap(team.median)} · IQR ${fmtLap(team.q1)}–${fmtLap(team.q3)} · ${team.laps} laps`}
+            data-tip={[
+              `# ${team.team}`,
+              `Median lap | ${fmtLap(team.median)}`,
+              `Middle 50% | ${fmtLap(team.q1)} – ${fmtLap(team.q3)}`,
+              i ? `Behind fastest | +${(team.median - teams[0].median).toFixed(3)} s` : "Fastest team",
+              `Clean laps | ${team.laps}`,
+            ].join("\n")}
+            data-tip-color={team.color}
             className="grid grid-cols-[110px_minmax(0,1fr)_64px] items-center gap-2.5 text-[12px]"
           >
             <span className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap">

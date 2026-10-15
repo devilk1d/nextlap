@@ -101,7 +101,7 @@ const UNIT = "text-[11px] font-semibold text-ink-mute";
 function Pill({ open, live, title }: { open: boolean; live: boolean; title: string }) {
   return (
     <span
-      title={title}
+      data-tip={title}
       className="inline-flex h-[24px] items-center rounded-md px-2.5 text-[11.5px] font-bold tracking-[.04em]"
       style={{
         background: open ? THROTTLE_COLOR : "var(--color-control)",
@@ -134,7 +134,7 @@ function Who({
       </div>
       <div
         className="mt-1 truncate text-[10.5px] leading-none text-ink-mute"
-        title={
+        data-tip={
           reading.live
             ? "Live car data from the telemetry file"
             : "No live data for this race: averages of the last completed lap"

@@ -143,7 +143,14 @@ export function LapTimeBoxPlot({ rows }: { rows: DriverRow[] }) {
           {boxes.map((box) => (
             <div
               key={box.row.run.driver_code}
-              title={`${box.row.run.driver_code} · median ${fmtLap(box.median)} · IQR ${fmtLap(box.q1)}–${fmtLap(box.q3)} · ${box.n} clean laps`}
+              data-tip={[
+                `# ${box.row.run.driver_code} · ${box.row.run.team}`,
+                `Median lap | ${fmtLap(box.median)}`,
+                `Middle 50% | ${fmtLap(box.q1)} – ${fmtLap(box.q3)}`,
+                `Typical range | ${fmtLap(box.low)} – ${fmtLap(box.high)}`,
+                `Clean laps | ${box.n}`,
+              ].join("\n")}
+              data-tip-color={box.row.run.color}
               className="relative flex-1"
             >
               <div

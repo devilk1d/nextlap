@@ -328,7 +328,10 @@ export function LeftPanel() {
   const change = (x.run.grid_position ?? x.position) - x.position;
 
   return (
-    <aside className="flex min-h-0 flex-col overflow-auto rounded-xl border border-line bg-panel [grid-area:left]">
+    <aside
+      data-tour="left"
+      className="flex min-h-0 flex-col overflow-auto rounded-xl border border-line bg-panel [grid-area:left]"
+    >
       <div className="flex items-center justify-between border-b border-divider px-3.5 py-2.5">
         <Dropdown
           {...DRIVER_MENU_SIZE}

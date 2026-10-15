@@ -32,6 +32,8 @@ type Props = {
   driver: Run | null;
   onDriver: (code: string) => void;
   loading: boolean;
+  /** Opens the guided tour; the button is hidden while there is no race to explain. */
+  onHelp?: () => void;
 };
 
 /** Races of the season, with a search box that filters by name, country code or date. */
@@ -151,6 +153,7 @@ export function Header({
   driver,
   onDriver,
   loading,
+  onHelp,
 }: Props) {
   const years = [...new Set(races.map((r) => r.year))].sort();
   const seasonRaces = races.filter((r) => r.year === race.year);
@@ -158,11 +161,13 @@ export function Header({
   const showDriver = (view === "replay" || view === "strat") && driver && race.predictable;
 
   return (
-    <header className="relative z-50 flex min-h-[52px] flex-wrap items-center gap-x-[18px] gap-y-2.5 rounded-xl border border-line bg-panel px-3.5 py-2 [grid-area:head]">
+    <header
+      data-tour="header"
+      className="relative z-50 flex min-h-[52px] flex-wrap items-center gap-x-[18px] gap-y-2.5 rounded-xl border border-line bg-panel px-3.5 py-2 [grid-area:head]">
       <button
         type="button"
         onClick={onHome}
-        title="Back to the start page"
+        data-tip="Back to the start page"
         className="flex cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 text-ink"
       >
         <div className="flex -skew-x-20 gap-[3px]">
@@ -240,6 +245,18 @@ export function Header({
 
       <div className="ml-auto flex items-center gap-3.5">
         <ReplayStatus />
+        {onHelp && (
+          <button
+            type="button"
+            data-tour="help"
+            onClick={onHelp}
+            data-tip="How to use this page"
+            aria-label="Open the guided tour"
+            className="size-7 cursor-pointer rounded-full border border-control bg-raised text-[12.5px] font-bold text-ink-soft"
+          >
+            ?
+          </button>
+        )}
         {driver && (
           <div className="flex items-center gap-2.5 whitespace-nowrap rounded-lg border border-control bg-raised py-[5px] pl-3 pr-1.5 text-[12.5px] font-semibold">
             {driver.team}

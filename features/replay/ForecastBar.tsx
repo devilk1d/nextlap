@@ -97,7 +97,7 @@ function Sector({
   const caption = done ? meaning.short : state === "current" ? "NOW" : "";
   return (
     <div
-      title={done ? `${name}: ${meaning.text}` : undefined}
+      data-tip={done ? `${name}: ${meaning.text}` : undefined}
       className="min-w-0"
       style={{ flexGrow: grow, flexBasis: 0 }}
     >
@@ -234,9 +234,13 @@ export function ForecastBar({ x, focus, time, leaderCode }: Props) {
   const why = useForecastWhy(x, reveal && lastLap ? lastLap.lap_number : lapNumber);
 
   return (
-    <div className="relative z-[2] flex items-stretch border-t border-divider bg-[rgba(22,22,25,.96)]">
+    <div
+      data-tour="forecast"
+      className="relative z-[2] flex items-stretch border-t border-divider bg-[rgba(22,22,25,.96)]"
+    >
       <Cell
         {...(why?.cellProps ?? {})}
+        data-tour="why"
         className={cn("relative w-[168px] shrink-0", why && "cursor-help")}
       >
         {why?.node}
@@ -252,7 +256,7 @@ export function ForecastBar({ x, focus, time, leaderCode }: Props) {
           />
         </span>
         <span
-          title={subTitle}
+          data-tip={subTitle}
           className="mt-1 truncate text-[11px] leading-none"
           style={{ color: reveal && lastDelta !== null ? deltaColor : "var(--color-ink-dim)" }}
         >
@@ -293,7 +297,7 @@ export function ForecastBar({ x, focus, time, leaderCode }: Props) {
         <span className={LABEL}>{lastLap ? `Last lap L${lastLap.lap_number}` : "Last lap"}</span>
         <span
           className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap leading-none"
-          title={
+          data-tip={
             lastDelta === null
               ? "The last lap had no forecast"
               : `Against its forecast: ${inside ? "within" : "outside"} the model's typical error of ±${tolerance?.toFixed(2)} s`

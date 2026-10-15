@@ -8,12 +8,15 @@ type Props = {
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** `data-tour` name the guided tour spotlights. */
+  tour?: string;
 };
 
 /** Bordered panel with a title row; the building block of every dashboard page. */
-export function Card({ title, sub, actions, children, className, bodyClassName }: Props) {
+export function Card({ title, sub, actions, children, className, bodyClassName, tour }: Props) {
   return (
     <section
+      data-tour={tour}
       className={cn(
         "flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-panel",
         className,

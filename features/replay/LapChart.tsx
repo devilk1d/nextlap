@@ -92,7 +92,10 @@ export function LapChart({ x, focus }: Props) {
   const hoverX = hover === null ? 0 : X(hover);
 
   return (
-    <section className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[290px]">
+    <section
+      data-tour="lapchart"
+      className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[290px]"
+    >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-divider px-3.5 py-[9px]">
         <span className="text-[13px] font-semibold">Lap times</span>
         <span className="whitespace-nowrap text-[11.5px] text-ink-mute">
@@ -100,12 +103,12 @@ export function LapChart({ x, focus }: Props) {
         </span>
         <Key line={<span className="h-0.5 w-4 bg-white" />}>Actual</Key>
         <Key line={<span className="w-4 border-t-2 border-dashed border-accent" />}>Predicted</Key>
-        <span title="Safety Car / VSC laps are excluded from model input and metrics">
+        <span data-tip="Safety Car / VSC laps are excluded from model input and metrics">
           <Key line={<span className="size-2.5 border-t-2 border-caution bg-caution/35" />}>
             SC/VSC · {neutralisedCount(laps)}
           </Key>
         </span>
-        <span title="Gap to the car ahead under 1 s">
+        <span data-tip="Gap to the car ahead under 1 s">
           <Key line={<span className="size-1.5 rotate-45 bg-best" />}>Dirty air · {dirtyCount}</Key>
         </span>
         <div className="ml-auto">
@@ -144,7 +147,7 @@ export function LapChart({ x, focus }: Props) {
       {missingCount > 0 && (
         <div
           className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-divider px-3.5 py-2 text-[11.5px]"
-          title={`A forecast is only made for a clean lap that follows ${FORECAST_WARMUP_LAPS} clean laps in a row on the same tyres. Hover a lap to see why it has none.`}
+          data-tip={`A forecast is only made for a clean lap that follows ${FORECAST_WARMUP_LAPS} clean laps in a row on the same tyres. Hover a lap to see why it has none.`}
         >
           <span className="font-semibold text-ink-soft">
             No forecast on {missingCount} lap{missingCount > 1 ? "s" : ""} because of

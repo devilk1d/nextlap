@@ -1,9 +1,9 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { Plot } from "@/components/charts/Plot";
 import { Swatch, TeamBar, TyreDot } from "@/components/ui/Swatch";
+import { HoverCard } from "@/components/ui/Tooltip";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { fmtLap, fmtLapAxis } from "@/lib/format";
 import { DRY_COMPOUNDS, EVENT, tyreOf } from "@/lib/race/constants";
@@ -30,79 +30,20 @@ function trendSentence(name: string, slope: number) {
 }
 
 function InfoTip({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
   return (
-    <span
-      className="relative inline-flex"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+    <button
+      type="button"
+      aria-label="How this is calculated"
+      data-tip={text}
+      className="grid size-[15px] cursor-help place-items-center rounded-full border border-control bg-transparent p-0 text-[10px] font-bold text-ink-mute"
     >
-      <button
-        type="button"
-        aria-label="How this is calculated"
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        className="grid size-[15px] cursor-help place-items-center rounded-full border border-control bg-transparent p-0 text-[10px] font-bold text-ink-mute"
-      >
-        i
-      </button>
-      {open && (
-        <span
-          role="tooltip"
-          className="absolute right-0 top-full z-20 mt-2 w-[270px] rounded-lg border border-popover bg-tooltip p-2.5 text-[11.5px] font-normal leading-[1.45] text-ink-dim shadow-[0_12px_30px_rgba(0,0,0,.5)]"
-        >
-          {text}
-        </span>
-      )}
-    </span>
+      i
+    </button>
   );
 }
 
 /** A hover card: `x`/`y` is the point it refers to, in screen coordinates. */
 type Hover = { x: number; y: number; title: string; lines: string[]; color: string };
-
-/**
- * Floats next to a point of the screen and picks the side with room: above it when it fits,
- * else below, else beside it; it is always kept inside the window. Fixed and in the body, so no
- * card with `overflow: hidden` can cut it off.
- */
-function HoverCard({ x, y, children }: { x: number; y: number; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const w = el.offsetWidth;
-    const h = el.offsetHeight;
-    const margin = 8;
-    const gap = 14;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const clamp = (v: number, lo: number, hi: number) =>
-      Math.min(Math.max(v, lo), Math.max(lo, hi));
-    let left = clamp(x - w / 2, margin, vw - w - margin);
-    let top = y - h - gap;
-    if (top < margin) top = y + gap;
-    if (top + h > vh - margin) {
-      // Neither above nor below fits: put it beside the point, on the roomier side.
-      top = clamp(y - h / 2, margin, vh - h - margin);
-      left =
-        vw - x - gap > x - gap
-          ? clamp(x + gap, margin, vw - w - margin)
-          : clamp(x - w - gap, margin, vw - w - margin);
-    }
-    el.style.left = `${left}px`;
-    el.style.top = `${top}px`;
-  }, [x, y, children]);
-  return createPortal(
-    <div
-      ref={ref}
-      className="pointer-events-none fixed left-0 top-0 z-[80] w-[230px] rounded-lg border border-popover bg-tooltip px-2.5 py-2 text-[11.5px] leading-[1.45] shadow-[0_12px_30px_rgba(0,0,0,.55)]"
-    >
-      {children}
-    </div>,
-    document.body,
-  );
-}
 
 export function DegradationChart({
   points,
@@ -339,7 +280,7 @@ export function DegradationChart({
               );
             })}
             {hover && (
-              <HoverCard x={hover.x} y={hover.y}>
+              <HoverCard x={hover.x} y={hover.y} width={230}>
                 <div className="flex items-center gap-1.5 font-bold text-ink">
                   <span className="size-2 rounded-full" style={{ background: hover.color }} />
                   {hover.title}

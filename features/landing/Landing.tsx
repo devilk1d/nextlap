@@ -133,7 +133,7 @@ function Profile({ trace }: { trace: ElevationTrace }) {
   return (
     <div
       className="rounded-lg border border-line"
-      title={`Real elevation along one lap, drawn ×${HEIGHT_SCALE} in 3D`}
+      data-tip={`Real elevation along one lap, drawn ×${HEIGHT_SCALE} in 3D`}
       style={{ padding: "7px 10px 8px", background: OVERLAY, width: "100%" }}
     >
       <div
@@ -571,6 +571,13 @@ export function Landing({ races, onStart }: Props) {
                   >
                     Pick one from the list on the left. It opens here in 3D, with its real
                     elevation.
+                  </div>
+                  <div
+                    className="text-[12.5px] text-ink-dim"
+                    style={{ marginTop: 12, maxWidth: 300 }}
+                  >
+                    Then choose a year and a driver and press Start replay: the model forecasts
+                    every lap, and a short tour explains what you see.
                   </div>
                 </div>
               </div>

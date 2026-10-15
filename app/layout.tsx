@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed, JetBrains_Mono, Michroma } from "next/font/google";
+import { TooltipLayer } from "@/components/ui/Tooltip";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -35,7 +36,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   const fonts = [barlow, barlowCondensed, michroma, jetbrainsMono].map((f) => f.variable).join(" ");
   return (
     <html lang="en" className={`${fonts} antialiased`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <TooltipLayer />
+      </body>
     </html>
   );
 }
