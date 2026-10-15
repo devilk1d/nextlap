@@ -63,7 +63,7 @@ export function Segmented<T extends string | number>({
         <button
           key={option.value}
           type="button"
-          title={option.title}
+          data-tip={option.title}
           onClick={() => onChange(option.value)}
           className={cn(
             "cursor-pointer whitespace-nowrap border-0",

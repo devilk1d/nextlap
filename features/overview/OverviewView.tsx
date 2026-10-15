@@ -81,7 +81,7 @@ export function OverviewView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 wide:grid-cols-6">
+        <div data-tour="ov-tiles" className="grid grid-cols-2 gap-2 wide:grid-cols-6">
           <Tile
             label="Winner"
             value={winner?.run.name ?? "—"}
@@ -128,17 +128,21 @@ export function OverviewView() {
         <div className="grid grid-cols-1 gap-2 wide:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
           <Card
             title="Classification"
+            tour="ov-class"
             sub="Click a column to sort · click a row to compare"
             bodyClassName="p-0"
           >
             <Classification rows={rows} selected={selected} onToggle={toggle} />
           </Card>
-          <Card title="Qualifying" sub="Q1 · Q2 · Q3 and grid">
+          <Card title="Qualifying" sub="Q1 · Q2 · Q3 and grid" tour="ov-quali">
             <QualifyingTable rows={rows} />
           </Card>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-panel px-3.5 py-2">
+        <div
+          data-tour="ov-compare"
+          className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-panel px-3.5 py-2"
+        >
           <span className="mr-1 text-[11.5px] text-ink-dim">Compare in the charts</span>
           {rows.map((row) => {
             const on = selected.includes(row.run.driver_code);
@@ -146,7 +150,7 @@ export function OverviewView() {
               <button
                 key={row.run.driver_code}
                 type="button"
-                title={row.run.name}
+                data-tip={row.run.name}
                 onClick={() => toggle(row.run.driver_code)}
                 className="flex cursor-pointer items-center gap-[5px] rounded-md border px-2 py-[3px] text-[11.5px] font-bold"
                 style={{
@@ -172,15 +176,16 @@ export function OverviewView() {
         </div>
 
         <div className="grid grid-cols-1 gap-2 wide:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
-          <Card title="Position by lap" sub="Selected drivers highlighted">
+          <Card title="Position by lap" sub="Selected drivers highlighted" tour="ov-position">
             <PositionChart timeline={timeline} rows={rows} selected={selected} bands={bands} />
           </Card>
-          <Card title="Gap to leader" sub="Seconds behind the leader">
+          <Card title="Gap to leader" sub="Seconds behind the leader" tour="ov-gap">
             <GapToLeaderChart timeline={timeline} rows={rows} selected={selected} bands={bands} />
           </Card>
           <Card
             title="Race control"
             sub="Flags, DNFs, leaders, stops"
+            tour="ov-control"
             bodyClassName="relative min-h-[240px]"
           >
             <RaceControlFeed events={events} />
@@ -188,13 +193,17 @@ export function OverviewView() {
         </div>
 
         <div className="grid grid-cols-1 gap-2 wide:grid-cols-3">
-          <Card title="Lap time spread" sub="Box = middle 50% · line = median">
+          <Card title="Lap time spread" sub="Box = middle 50% · line = median" tour="ov-spread">
             <LapTimeBoxPlot rows={rows} />
           </Card>
-          <Card title="Team race pace" sub="Clean laps · sorted by median">
+          <Card title="Team race pace" sub="Clean laps · sorted by median" tour="ov-team">
             <TeamPaceBars teams={teams} />
           </Card>
-          <Card title="Sector dominance" sub="Fastest selected driver per sector">
+          <Card
+            title="Sector dominance"
+            sub="Fastest selected driver per sector"
+            tour="ov-sector"
+          >
             <SectorDominance
               timeline={timeline}
               circuitName={race.circuit.short_name}
@@ -205,10 +214,10 @@ export function OverviewView() {
         </div>
 
         <div className="grid grid-cols-1 gap-2 wide:grid-cols-2">
-          <Card title="Traffic" sub="Pace lost when following closely">
+          <Card title="Traffic" sub="Pace lost when following closely" tour="ov-traffic">
             <TrafficPanel bins={traffic} rows={rows} />
           </Card>
-          <Card title="Weather through the race">
+          <Card title="Weather through the race" tour="ov-weather">
             <WeatherCharts timeline={timeline} rows={rows} selected={selected} bands={bands} />
           </Card>
         </div>

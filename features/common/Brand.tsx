@@ -119,7 +119,7 @@ export function TeamLogo({
   }
   return (
     <span
-      title={team}
+      data-tip={team}
       className={cn("grid flex-none place-items-center rounded-[5px] bg-white", className)}
       style={{ width: size, height: size }}
     >

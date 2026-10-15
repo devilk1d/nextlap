@@ -12,6 +12,8 @@ import { useReplay } from "@/features/replay/store";
 import { usePlayback } from "@/features/replay/usePlayback";
 import { SeasonProvider } from "@/features/common/Brand";
 import { Landing } from "@/features/landing/Landing";
+import { Tour } from "@/features/tour/Tour";
+import { useTour } from "@/features/tour/store";
 import { Header } from "./Header";
 import { RaceProvider } from "./race-context";
 import { defaultRace, raceForSeason, useSelection, type View } from "./selection";
@@ -88,6 +90,15 @@ export function Dashboard({ races }: { races: RaceInfo[] }) {
           driver={driver}
           onDriver={(code) => update({ driver: code })}
           loading={isLoading}
+          onHelp={
+            ready
+              ? () => {
+                  // The tour explains the replay view, so it opens there.
+                  update({ view: null });
+                  useTour.getState().start();
+                }
+              : undefined
+          }
         />
 
         {!race.predictable ? (
@@ -130,6 +141,7 @@ export function Dashboard({ races }: { races: RaceInfo[] }) {
               },
             }}
           >
+            <Tour view={view} onView={(next) => update({ view: next === "replay" ? null : next })} />
             {view === "replay" && <ReplayView />}
             {view === "h2h" && <H2HView />}
             {view === "strat" && <StrategyView />}

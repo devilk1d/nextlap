@@ -36,7 +36,7 @@ function Hero() {
       <WeatherBar lap={lap} lapsToGo={x.done ? 0 : timeline.totalLaps - x.currentLap} />
 
       <div className="relative flex min-h-0 flex-1 p-2.5">
-        <div className="relative min-w-0 flex-1">
+        <div data-tour="track" className="relative min-w-0 flex-1">
           <TrackPanel
             geometry={geometry}
             sectors={sectors}

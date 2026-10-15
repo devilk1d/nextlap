@@ -120,7 +120,7 @@ export function CarData({ x, time }: Props) {
     : "Lap averages · white mark = top speed of the lap · no live data for this race";
 
   return (
-    <div title={caption} className="flex min-h-0 flex-1 flex-col gap-3.5">
+    <div data-tip={caption} className="flex min-h-0 flex-1 flex-col gap-3.5">
       <div className="flex items-center gap-2.5">
         <TeamLogo team={x.run.team} color={x.run.color} size={32} />
         <div className="min-w-0 leading-tight">
@@ -188,7 +188,7 @@ export function CarData({ x, time }: Props) {
 
       <div className="flex items-center justify-between">
         <span
-          title={
+          data-tip={
             live
               ? drs
                 ? "DRS open"
@@ -204,7 +204,7 @@ export function CarData({ x, time }: Props) {
           DRS
         </span>
         <span
-          title={live ? "Current gear" : "Most used gear on the lap"}
+          data-tip={live ? "Current gear" : "Most used gear on the lap"}
           className="flex items-baseline gap-2"
         >
           <span className="text-[11px] font-semibold tracking-[.1em] text-ink-mute">GEAR</span>

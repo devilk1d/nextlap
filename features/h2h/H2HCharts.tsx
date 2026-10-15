@@ -109,7 +109,10 @@ export function LapTimesChart({ battle }: { battle: Battle }) {
   const hoverX = lap === null ? 0 : X(lap);
 
   return (
-    <section className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[200px]">
+    <section
+      data-tour="h2h-laps"
+      className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[200px]"
+    >
       <Header>
         <span className="text-[13px] font-semibold">Lap times</span>
         <LineKey color={colorA} label={a.run.driver_code} />
@@ -404,7 +407,10 @@ export function GapChart({ battle }: { battle: Battle }) {
   const barWidth = (100 / total) * 0.68;
 
   return (
-    <section className="flex min-h-[200px] flex-[1_1_0] flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[190px]">
+    <section
+      data-tour="h2h-gap"
+      className="flex min-h-[200px] flex-[1_1_0] flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[190px]"
+    >
       <Header>
         <span className="text-[13px] font-semibold">Gap between drivers</span>
         <span className="flex overflow-hidden rounded-md border border-control text-[11.5px] font-semibold">
@@ -506,7 +512,7 @@ export function GapChart({ battle }: { battle: Battle }) {
             {pitMarks.map((mark) => (
               <span
                 key={mark.key}
-                title={mark.title}
+                data-tip={mark.title}
                 className="pointer-events-none absolute z-[2] grid size-[15px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-[9px] font-bold text-white"
                 style={{
                   left: `calc(${mark.left}% + ${mark.shift}px)`,

@@ -108,7 +108,7 @@ function ToneLegend() {
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1 px-3.5 py-2 text-[10.5px] text-ink-mute">
       {(["purple", "green", "yellow", "white"] as const).map((tone) => (
-        <span key={tone} title={SECTOR_TONE_MEANING[tone].text} className="flex items-center gap-1">
+        <span key={tone} data-tip={SECTOR_TONE_MEANING[tone].text} className="flex items-center gap-1">
           <span className="size-2 rounded-sm" style={{ background: SECTOR_TONE_COLOR[tone] }} />
           {SECTOR_TONE_MEANING[tone].name}
         </span>
@@ -134,7 +134,10 @@ export function LapLogPanel({ x, focus, time }: Props) {
       <div className="flex-none border-b border-divider px-3.5 py-2.5 text-[12px] font-semibold">
         Lap log
       </div>
-      <div className="min-h-[200px] flex-1 overflow-auto py-1 max-[1179px]:max-h-[420px]">
+      <div
+        data-tour="lap-log"
+        className="min-h-[200px] flex-1 overflow-auto py-1 max-[1179px]:max-h-[420px]"
+      >
         {!done && (
           <div className="border-l-2 border-accent bg-accent/8 py-[9px] pl-3 pr-3.5">
             <div className="flex items-baseline gap-2">

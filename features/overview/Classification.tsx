@@ -125,7 +125,7 @@ function columns(fastest: number | null, topSpeed: number | null): Column[] {
       cell: (r) => (
         <span className="inline-flex gap-[3px]">
           {r.strategy.map((compound, i) => (
-            <span key={i} title={tyreOf(compound).name}>
+            <span key={i} data-tip={tyreOf(compound).name}>
               <TyreDot color={tyreOf(compound).color} size={9} />
             </span>
           ))}
@@ -204,7 +204,7 @@ export function Classification({ rows, selected, onToggle }: Props) {
               <Th
                 key={col.key}
                 left={col.left}
-                title="Sort"
+                data-tip="Sort"
                 className="cursor-pointer"
                 style={{ color: sort.key === col.key ? "var(--color-ink)" : undefined }}
                 onClick={() =>

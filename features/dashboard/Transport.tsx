@@ -69,11 +69,15 @@ export function Transport({ run }: { run: Run }) {
   useTransportKeys(run);
 
   return (
-    <section className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-line bg-panel px-3 py-2 [grid-area:trans]">
+    <section
+      data-tour="transport"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-line bg-panel px-3 py-2 [grid-area:trans]"
+    >
       <div className="flex gap-1">
         <button
           type="button"
-          title="Previous lap (←) · Shift + ← goes back 10 s"
+          aria-label="Previous lap"
+          data-tip="Previous lap (←)&#10;Shift + ← goes back 10 s"
           className={STEP_BUTTON}
           onClick={() => seek(lapBoundary(run, time, -1))}
         >
@@ -81,7 +85,8 @@ export function Transport({ run }: { run: Run }) {
         </button>
         <button
           type="button"
-          title={`${playing ? "Pause" : "Play"} (Space)`}
+          aria-label={playing ? "Pause" : "Play"}
+          data-tip={`${playing ? "Pause" : "Play"} (Space)`}
           onClick={toggle}
           className="h-9 min-w-[92px] cursor-pointer whitespace-nowrap rounded-lg border-0 bg-accent px-3.5 text-[12.5px] font-bold tracking-[.04em] text-[#111]"
         >
@@ -89,7 +94,8 @@ export function Transport({ run }: { run: Run }) {
         </button>
         <button
           type="button"
-          title="Next lap (→) · Shift + → skips 10 s"
+          aria-label="Next lap"
+          data-tip="Next lap (→)&#10;Shift + → skips 10 s"
           className={STEP_BUTTON}
           onClick={() => seek(lapBoundary(run, time, 1))}
         >

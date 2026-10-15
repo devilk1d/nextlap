@@ -31,6 +31,7 @@ function Gantt({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => vo
   return (
     <Card
       title="Race strategy · full field"
+      tour="strat-gantt"
       // sub={`Sorted by current position · click a row to select · lap ${frame.leaderLap}/${total}`}
       className="min-h-0"
       bodyClassName={cn("flex min-h-0 flex-col py-2.5", collapsed && "hidden")}
@@ -38,7 +39,7 @@ function Gantt({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => vo
         <Button
           onClick={onToggle}
           aria-expanded={!collapsed}
-          title={
+          data-tip={
             collapsed
               ? "Show the strategy of the whole field"
               : "Hide it to give room to the charts below"
@@ -105,7 +106,12 @@ function Gantt({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => vo
                   return (
                     <div
                       key={stint.index}
-                      title={`${x.run.driver_code} · stint ${stint.index + 1} · ${tyre.name} · laps ${stint.start}–${stint.end} (${length} laps)${stint.fresh === false ? " · used set" : " · new set"}`}
+                      data-tip={[
+                        `# ${x.run.driver_code} · stint ${stint.index + 1}`,
+                        `Tyre | ${tyre.name}${stint.fresh === false ? " (used set)" : " (new set)"}`,
+                        `Laps | ${stint.start}–${stint.end} (${length})`,
+                      ].join("\n")}
+                      data-tip-color={tyre.color}
                       className="absolute inset-y-0.5 flex items-center overflow-hidden rounded-[3px] pl-1 text-[9.5px] font-extrabold text-[#111]"
                       style={{
                         left: `calc(${percentOf(stint.start - 1, 0, total)}% + 1px)`,
@@ -196,6 +202,7 @@ export function StrategyView() {
   const pitStopsCard = (
     <Card
       title="Pit stops"
+      tour="strat-pits"
       // sub="Lane = PitOut − PitIn · loss = in-lap + out-lap vs median"
       className={collapsed ? "min-h-[200px] flex-1" : "max-h-[420px] min-h-[220px] wide:max-h-none"}
       bodyClassName="flex min-h-0 flex-col py-2"
@@ -214,6 +221,7 @@ export function StrategyView() {
       {!collapsed && pitStopsCard}
       <Card
         title="Tyre degradation"
+        tour="strat-degradation"
         // sub="Time lost as the tyres age · clean laps so far"
         className="sg-degradation min-h-[300px]"
         bodyClassName="flex min-h-0 flex-col py-2"

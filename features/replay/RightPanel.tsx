@@ -22,6 +22,7 @@ function Tyres({ x, focus }: { x: Standing; focus: Focus }) {
   return (
     <Card
       title="Tyres & strategy"
+      tour="tyres"
       sub={`Lap ${x.done ? timeline.totalLaps : x.currentLap}`}
       className="flex-none"
       bodyClassName="flex flex-col gap-3 pb-3.5"
@@ -85,6 +86,7 @@ function Telemetry({ x, focus, time }: { x: Standing; focus: Focus; time: number
   return (
     <Card
       title="Telemetry"
+      tour="telemetry"
       sub={`Last lap · L${lap.lap_number}`}
       className="flex-[1_0_auto]"
       bodyClassName="flex flex-col gap-3 pb-3.5"

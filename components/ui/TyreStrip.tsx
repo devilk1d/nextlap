@@ -21,7 +21,7 @@ export function TyreStrip({ stints, totalLaps, currentLap, distance, className }
         return (
           <div
             key={stint.index}
-            title={`${tyre.name} · laps ${stint.start}–${stint.end}`}
+            data-tip={`${tyre.name} · laps ${stint.start}–${stint.end}`}
             className="absolute inset-y-0 flex items-center border-r-2 border-panel pl-1.5 text-[10.5px] font-bold text-[#111]"
             style={{
               left: `${((stint.start - 1) / totalLaps) * 100}%`,
