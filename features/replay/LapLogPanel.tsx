@@ -55,18 +55,18 @@ function LogEntry({
       }}
     >
       <div className="flex items-baseline gap-2">
-        <span className="text-[12px] text-ink-mute">L{lap.lap_number}</span>
+        <span className="text-[13px] text-ink-mute">L{lap.lap_number}</span>
         <span
-          className="font-mono text-[13.5px] font-semibold"
+          className="font-mono text-[14.5px] font-semibold"
           style={{ color: lapTone === "white" ? undefined : SECTOR_TONE_COLOR[lapTone] }}
         >
           {fmtLap(lap.lap_time_sec)}
         </span>
-        <span className="ml-auto text-[10.5px] font-bold tracking-[.06em] text-caution">
+        <span className="ml-auto text-[11.5px] font-bold tracking-[.06em] text-caution">
           {lap.flag ?? ""}
         </span>
       </div>
-      <div className="mt-[3px] font-mono text-[11.5px] leading-[1.65] text-ink-mute">
+      <div className="mt-[3px] font-mono text-[12.5px] leading-[1.65] text-ink-mute">
         <div>
           {SECTOR_TIME_KEYS.map((key, i) => (
             <span key={key}>
@@ -106,7 +106,7 @@ function LogEntry({
 
 function ToneLegend() {
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 px-3.5 py-2 text-[10.5px] text-ink-mute">
+    <div className="flex flex-wrap gap-x-3 gap-y-1 px-3.5 py-2 text-[11.5px] text-ink-mute">
       {(["purple", "green", "yellow", "white"] as const).map((tone) => (
         <span key={tone} data-tip={SECTOR_TONE_MEANING[tone].text} className="flex items-center gap-1">
           <span className="size-2 rounded-sm" style={{ background: SECTOR_TONE_COLOR[tone] }} />
@@ -131,7 +131,7 @@ export function LapLogPanel({ x, focus, time }: Props) {
 
   return (
     <>
-      <div className="flex-none border-b border-divider px-3.5 py-2.5 text-[12px] font-semibold">
+      <div className="flex-none border-b border-divider px-3.5 py-2.5 text-[13px] font-semibold">
         Lap log
       </div>
       <div
@@ -141,15 +141,15 @@ export function LapLogPanel({ x, focus, time }: Props) {
         {!done && (
           <div className="border-l-2 border-accent bg-accent/8 py-[9px] pl-3 pr-3.5">
             <div className="flex items-baseline gap-2">
-              <span className="text-[12px] text-ink-mute">L{currentLap}</span>
-              <span className="font-mono text-[13.5px] font-semibold text-accent">
+              <span className="text-[13px] text-ink-mute">L{currentLap}</span>
+              <span className="font-mono text-[14.5px] font-semibold text-accent">
                 {fmtTimer(elapsed)}
               </span>
-              <span className="ml-auto text-[10.5px] font-bold tracking-[.06em] text-accent">
+              <span className="ml-auto text-[11.5px] font-bold tracking-[.06em] text-accent">
                 IN PROGRESS
               </span>
             </div>
-            <div className="mt-[3px] font-mono text-[11.5px] leading-[1.65] text-ink-mute">
+            <div className="mt-[3px] font-mono text-[12.5px] leading-[1.65] text-ink-mute">
               <div>
                 {SECTOR_TIME_KEYS.map((key, i) => {
                   const finished = progress.done[i];

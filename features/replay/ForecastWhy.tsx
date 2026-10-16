@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, type ReactNode } from "react";
 import { cn } from "@/components/ui/cn";
 import { useRaceFactors } from "@/lib/api";
 import { fmtLap } from "@/lib/format";
 import { tyreOf } from "@/lib/race/constants";
 import type { Standing } from "@/lib/race/timeline";
 import { useRace } from "@/features/dashboard/race-context";
-import { TOUR_STEPS } from "@/features/tour/steps";
-import { useTour } from "@/features/tour/store";
 
 const FASTER = "var(--color-go)";
 const SLOWER = "var(--color-stop)";
@@ -33,65 +30,81 @@ const colorOf = (item: Item) =>
 /** Factors smaller than this are folded into one "Other" line to keep the list short. */
 const MIN_LISTED = 0.01;
 
+/** One box of the strip: a label, a number, and optionally a bar showing how big it is. */
+function Box({
+  label,
+  value,
+  color,
+  bar,
+  tip,
+  className,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+  /** Size of the bar as a share of the biggest factor, signed: negative grows to the left. */
+  bar?: number;
+  tip: string;
+  className?: string;
+}) {
+  return (
+    <div
+      data-tip={tip}
+      data-tip-color={color}
+      className={cn(
+        "relative min-w-[88px] flex-1 overflow-hidden rounded-lg bg-raised px-2.5 pb-2 pt-1",
+        className,
+      )}
+    >
+      <div className="truncate text-[12.5px] text-ink-mute">{label}</div>
+      <div
+        className="mt-0.5 whitespace-nowrap font-mono text-[15px] font-semibold leading-tight"
+        style={{ color }}
+      >
+        {value}
+      </div>
+      {bar !== undefined && (
+        <div className="absolute inset-x-0 bottom-0 h-[4px] bg-divider" aria-hidden>
+          <span className="absolute inset-y-0 left-1/2 border-l border-ink-faint" />
+          <span
+            className="absolute inset-y-0"
+            style={{
+              background: color,
+              width: `${Math.abs(bar) * 50}%`,
+              ...(bar < 0 ? { right: "50%" } : { left: "50%" }),
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
- * "Why this forecast": a thin strip along the bottom of the forecast cell that shows how each
- * factor moved the number, and a popover with the list behind it. The split comes from the final
- * model (Shapley values per feature group, stored in `prediction_factors`); each value is relative
- * to a typical lap of the same race, not an absolute effect.
+ * "Why this forecast": how the number was built, always on screen under the forecast bar. It starts
+ * from the average of the last five laps and shows how far each factor moved it, as a row of boxes
+ * that ends in the forecast. The split comes from the final model (Shapley values per feature group,
+ * stored in `prediction_factors`); each value is relative to a typical lap of the same race, not an
+ * absolute effect. `hint` is the small marker for the forecast cell, `strip` the row itself.
  *
  * Returns null while the split is not available for this lap (no forecast, or not stored yet).
  */
 export function useForecastWhy(
   x: Standing,
   lapNumber: number,
-): {
-  cellProps: HTMLAttributes<HTMLDivElement> & { ref: React.Ref<HTMLDivElement> };
-  node: ReactNode;
-} | null {
+): { hint: ReactNode; strip: ReactNode } | null {
   const { race, timeline } = useRace();
   const { data } = useRaceFactors(race.race_id);
-  const cell = useRef<HTMLDivElement>(null);
-  const popover = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const [hot, setHot] = useState<string | null>(null);
-  const [place, setPlace] = useState({ left: 8, bottom: 8, room: 400 });
 
   const row = useMemo(
     () =>
       data?.factors.find(
-        (factor) => factor.driver_code === x.run.driver_code && factor.lap_number === lapNumber,
+        (factor) =>
+          factor.driver_code === x.run.driver_code &&
+          factor.lap_number === lapNumber,
       ),
     [data, x.run.driver_code, lapNumber],
   );
-
-  useEffect(() => {
-    if (!pinned) return;
-    const away = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (cell.current?.contains(target) || popover.current?.contains(target)) return;
-      setPinned(false);
-      setOpen(false);
-    };
-    document.addEventListener("mousedown", away);
-    return () => document.removeEventListener("mousedown", away);
-  }, [pinned]);
-
-  const locate = () => {
-    const box = cell.current?.getBoundingClientRect();
-    if (!box) return;
-    setPlace({
-      left: Math.max(8, Math.min(box.left, window.innerWidth - 356)),
-      bottom: window.innerHeight - box.top + 8,
-      room: Math.max(160, box.top - 16),
-    });
-  };
-
-  // The guided tour shows this popover by itself on its "Why this number?" step.
-  const touring = useTour((s) => s.open && TOUR_STEPS[s.step]?.target === "why");
-  useEffect(() => {
-    if (touring) locate();
-  }, [touring, row]);
 
   if (!row) return null;
 
@@ -130,7 +143,12 @@ export function useForecastWhy(
               ? `Dirty air · ${gap.toFixed(1)} s to car ahead`
               : `${gap.toFixed(1)} s to car ahead${usual(row.ref_gap_ahead, 1)}`,
     },
-    { key: "telemetry", name: "Car data", value: row.c_telemetry, why: "Speed, throttle, braking" },
+    {
+      key: "telemetry",
+      name: "Car data",
+      value: row.c_telemetry,
+      why: "Speed, throttle, braking",
+    },
     {
       key: "tyres",
       name: "Tyres",
@@ -140,7 +158,12 @@ export function useForecastWhy(
           ? `${tyreOf(before.compound).name}, ${before.tyre_life} laps${usual(row.ref_tyre_life)}`
           : "Compound and age",
     },
-    { key: "track", name: "Track", value: row.c_track, why: "Field pace this lap" },
+    {
+      key: "track",
+      name: "Track",
+      value: row.c_track,
+      why: "Field pace this lap",
+    },
     {
       key: "progress",
       name: "Race progress",
@@ -156,10 +179,17 @@ export function useForecastWhy(
           ? `Track ${before.track_temp.toFixed(1)} °C${usual(row.ref_track_temp, 1)}`
           : "Temperature, wind, humidity",
     },
-    { key: "drift", name: "Baseline", value: row.baseline_shift, why: "Usual change per lap" },
+    {
+      key: "drift",
+      name: "Baseline",
+      value: row.baseline_shift,
+      why: "Usual change per lap",
+    },
   ];
   const items = [...all].sort((p, q) => Math.abs(q.value) - Math.abs(p.value));
-  const listed = items.filter((item) => item.key !== "drift" && Math.abs(item.value) >= MIN_LISTED);
+  const listed = items.filter(
+    (item) => item.key !== "drift" && Math.abs(item.value) >= MIN_LISTED,
+  );
   const rest = items.filter((item) => !listed.includes(item));
   const lines: Item[] = rest.length
     ? [
@@ -173,13 +203,24 @@ export function useForecastWhy(
       ]
     : listed;
 
-  const forecast = row.window_mean_sec + items.reduce((sum, item) => sum + item.value, 0);
-  const actual = lapNumber <= x.completed ? (lap(lapNumber)?.lap_time_sec ?? null) : null;
+  const forecast =
+    row.window_mean_sec + items.reduce((sum, item) => sum + item.value, 0);
+  const actual =
+    lapNumber <= x.completed ? (lap(lapNumber)?.lap_time_sec ?? null) : null;
+  // The biggest factor fills half a bar, so the boxes can be compared at a glance.
+  const reach = Math.max(0.05, ...lines.map((item) => Math.abs(item.value)));
 
-  // Strip: slower factors to the right of the centre line, faster to the left, width = seconds.
-  const parts = items.filter((item) => item.key !== "drift" && Math.abs(item.value) >= 0.0005);
-  const fasterSum = parts.filter((p) => p.value < 0).reduce((s, p) => s + Math.abs(p.value), 0);
-  const slowerSum = parts.filter((p) => p.value > 0).reduce((s, p) => s + p.value, 0);
+  // A 3 px strip along the bottom of the forecast cell: slower factors to the right of the centre
+  // line, faster to the left, width = seconds.
+  const parts = items.filter(
+    (item) => item.key !== "drift" && Math.abs(item.value) >= 0.0005,
+  );
+  const fasterSum = parts
+    .filter((p) => p.value < 0)
+    .reduce((s, p) => s + Math.abs(p.value), 0);
+  const slowerSum = parts
+    .filter((p) => p.value > 0)
+    .reduce((s, p) => s + p.value, 0);
   const total = fasterSum + slowerSum || 1;
   const centre = (fasterSum / total) * 100;
   const segments: { item: Item; left: number; width: number }[] = [];
@@ -196,125 +237,68 @@ export function useForecastWhy(
     }
   }
 
-  const show = () => {
-    locate();
-    setOpen(true);
-  };
-  const hide = () => {
-    if (!pinned) setOpen(false);
-  };
-
-  const cellProps = {
-    ref: cell,
-    role: "button" as const,
-    tabIndex: 0,
-    "aria-expanded": open,
-    "aria-label": "Why this forecast",
-    onMouseEnter: show,
-    onMouseLeave: hide,
-    onFocus: show,
-    onBlur: hide,
-    onClick: () => {
-      const next = !pinned;
-      setPinned(next);
-      if (next) show();
-      else setOpen(false);
-    },
-    onKeyDown: (event: React.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPinned(false);
-        setOpen(false);
-      }
-    },
-  };
-
-  const node = (
+  const hint = (
     <>
-      <span className="pointer-events-none absolute right-3 top-2 text-[10px] font-semibold text-accent">
-        Why?
+      <span className="pointer-events-none absolute right-3 top-2 rounded-full border border-accent/60 bg-accent/12 px-2 py-px text-[12px] font-bold text-accent">
+        Why ↓
       </span>
       <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-divider">
         {segments.map(({ item, left, width }) => (
           <span
             key={item.key}
-            className={cn("absolute inset-y-0", hot === item.key && "brightness-150")}
-            style={{ left: `${left}%`, width: `${width}%`, background: colorOf(item) }}
+            className="absolute inset-y-0"
+            style={{
+              left: `${left}%`,
+              width: `${width}%`,
+              background: colorOf(item),
+            }}
           />
         ))}
       </span>
-      {(open || touring) &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={popover}
-            role="dialog"
-            aria-label="Why this forecast"
-            className={cn(
-              "fixed w-[340px] max-w-[calc(100vw-16px)] overflow-y-auto rounded-xl border border-popover bg-tooltip px-3.5 py-3 text-[12px] shadow-[0_12px_30px_rgba(0,0,0,.5)]",
-              // Above the tour's dimming layer (z-250) while the tour is explaining it.
-              touring ? "z-[280]" : "z-[100]",
-              pinned ? "pointer-events-auto" : "pointer-events-none",
-            )}
-            style={{ left: place.left, bottom: place.bottom, maxHeight: place.room }}
-          >
-            <div className="flex items-baseline justify-between">
-              <span className="text-[14px] font-bold">Why {fmtLap(forecast)}</span>
-              <span className="text-[11px] text-ink-mute">
-                Lap {lapNumber} · {x.run.driver_code}
-              </span>
-            </div>
-            <div className="mt-2.5 flex justify-between text-ink-dim">
-              <span>Average of last 5 laps</span>
-              <span className="font-mono">{fmtLap(row.window_mean_sec)}</span>
-            </div>
-            <div className="mt-1.5 border-t border-hairline pt-1.5">
-              {lines.map((item) => (
-                <div
-                  key={item.key}
-                  onMouseEnter={() => setHot(item.key)}
-                  onMouseLeave={() => setHot(null)}
-                  className={cn(
-                    "grid grid-cols-[8px_minmax(0,1fr)_auto] items-baseline gap-x-2.5 rounded-md px-1 py-[5px]",
-                    hot === item.key && "bg-raised",
-                  )}
-                >
-                  <span
-                    className="size-2 self-center rounded-[2px]"
-                    style={{ background: colorOf(item) }}
-                  />
-                  <span className="min-w-0">
-                    <span className="font-semibold">{item.name}</span>
-                    <span className="block text-[11px] leading-[1.35] text-ink-mute">
-                      {item.why}
-                    </span>
-                  </span>
-                  <span
-                    className="whitespace-nowrap text-right font-mono font-semibold"
-                    style={{ color: colorOf(item) }}
-                  >
-                    {signed(item.value)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-1.5 flex items-baseline justify-between border-t border-hairline pt-2 text-ink-dim">
-              <span>
-                Forecast <b className="font-mono text-[14px] text-ink">{fmtLap(forecast)}</b>
-              </span>
-              <span className="font-mono">
-                {actual === null
-                  ? "In progress"
-                  : `Actual ${fmtLap(actual)} (${actual - forecast >= 0 ? "+" : MINUS}${Math.abs(actual - forecast).toFixed(2)})`}
-              </span>
-            </div>
-            <div className="mt-2 text-[10.5px] text-ink-mute">
-              Compared with a typical lap of this race.
-            </div>
-          </div>,
-          document.body,
-        )}
     </>
   );
 
-  return { cellProps, node };
+  const strip = (
+    <div
+      data-tour="why"
+      className="flex items-stretch gap-2 border-t border-divider bg-[rgba(22,22,25,.96)] px-3 py-1.5"
+    >
+      <div className="flex w-[68px] shrink-0 flex-col justify-center text-[12.5px] font-bold leading-tight text-accent">
+        Why this forecast
+      </div>
+      <div className="flex min-w-0 flex-1 items-stretch gap-1.5 overflow-x-auto">
+        <Box
+          label="Last 5 laps"
+          value={fmtLap(row.window_mean_sec)}
+          tip={
+            "# Starting point\nThe average lap time of the last 5 laps.\nEvery factor below moves the forecast away from it."
+          }
+        />
+        {lines.map((item) => (
+          <Box
+            key={item.key}
+            label={item.name}
+            value={signed(item.value)}
+            color={colorOf(item)}
+            bar={item.value / reach}
+            tip={`# ${item.name}\n${item.why}\nEffect | ${signed(item.value)}\nCompared with a typical lap of this race.`}
+          />
+        ))}
+        <Box
+          label={
+            actual === null ? "Forecast" : `Forecast · actual ${fmtLap(actual)}`
+          }
+          value={fmtLap(forecast)}
+          className="border border-accent/60 bg-accent/10"
+          tip={
+            actual === null
+              ? `# Forecast\nStarting point plus every factor.`
+              : `# Forecast\nStarting point plus every factor.\nActual | ${fmtLap(actual)}\nDifference | ${actual - forecast >= 0 ? "+" : MINUS}${Math.abs(actual - forecast).toFixed(3)} s`
+          }
+        />
+      </div>
+    </div>
+  );
+
+  return { hint, strip };
 }

@@ -66,13 +66,13 @@ export function LapStats({ focus, className }: Props) {
           key={stat.name}
           className="-mb-px -mr-px min-w-0 border-b border-r border-hairline px-2.5 py-1.5"
         >
-          <div className="truncate text-[11.5px] text-ink-mute">{stat.name}</div>
+          <div className="truncate text-[12.5px] text-ink-mute">{stat.name}</div>
           <div className="mt-0.5 whitespace-nowrap font-cond text-[20px] font-semibold">
             {stat.value}
-            <span className="text-[11px] text-ink-mute"> {stat.unit}</span>
+            <span className="text-[12px] text-ink-mute"> {stat.unit}</span>
           </div>
           <div
-            className="mt-px truncate text-[11px]"
+            className="mt-px truncate text-[12px]"
             style={{ color: stat.accent ? "var(--color-accent)" : "var(--color-ink-mute)" }}
           >
             {stat.sub}

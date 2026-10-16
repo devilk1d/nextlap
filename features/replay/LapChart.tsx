@@ -19,11 +19,11 @@ import type { Focus } from "./focus";
 import { useReplay } from "./store";
 
 const GRID_LINE = "absolute inset-x-0 border-t border-dashed border-hairline";
-const AXIS_LABEL = "absolute font-mono text-[10.5px] text-ink-mute";
+const AXIS_LABEL = "absolute font-mono text-[11.5px] text-ink-mute";
 
 function Key({ children, line }: { children: React.ReactNode; line: React.ReactNode }) {
   return (
-    <span className="flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-ink-soft">
+    <span className="flex items-center gap-1.5 whitespace-nowrap text-[12.5px] text-ink-soft">
       {line}
       {children}
     </span>
@@ -94,11 +94,11 @@ export function LapChart({ x, focus }: Props) {
   return (
     <section
       data-tour="lapchart"
-      className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[290px]"
+      className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[260px]"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-divider px-3.5 py-[9px]">
-        <span className="text-[13px] font-semibold">Lap times</span>
-        <span className="whitespace-nowrap text-[11.5px] text-ink-mute">
+        <span className="text-[14px] font-semibold">Lap times</span>
+        <span className="whitespace-nowrap text-[12.5px] text-ink-mute">
           {scopeName} · L{view.start}–{view.end}
         </span>
         <Key line={<span className="h-0.5 w-4 bg-white" />}>Actual</Key>
@@ -146,7 +146,7 @@ export function LapChart({ x, focus }: Props) {
 
       {missingCount > 0 && (
         <div
-          className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-divider px-3.5 py-2 text-[11.5px]"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-divider px-3.5 py-2 text-[12.5px]"
           data-tip={`A forecast is only made for a clean lap that follows ${FORECAST_WARMUP_LAPS} clean laps in a row on the same tyres. Hover a lap to see why it has none.`}
         >
           <span className="font-semibold text-ink-soft">
@@ -199,7 +199,7 @@ export function LapChart({ x, focus }: Props) {
             >
               {(j === 0 || laps[j - 1].flag !== l.flag) && (
                 <span
-                  className="absolute bottom-[3px] left-[3px] text-[9.5px] font-bold tracking-[.04em]"
+                  className="absolute bottom-[3px] left-[3px] text-[10px] font-bold tracking-[.04em]"
                   style={{ color: EVENT[l.flag].color }}
                 >
                   {l.flag}
@@ -216,21 +216,21 @@ export function LapChart({ x, focus }: Props) {
               className="absolute inset-y-0 border-l border-caution"
               style={{ left: `${X(s.start - 1.5)}%` }}
             >
-              <span className="absolute left-1 top-0.5 whitespace-nowrap text-[10px] font-bold text-caution">
+              <span className="absolute left-1 top-0.5 whitespace-nowrap text-[11px] font-bold text-caution">
                 PIT · L{s.start - 1}
               </span>
             </div>
           ))}
         {!whole && stint.index > 0 && (
           <div className="absolute inset-y-0 left-0 border-l border-caution">
-            <span className="absolute left-1 top-0.5 whitespace-nowrap text-[10px] font-bold text-caution">
+            <span className="absolute left-1 top-0.5 whitespace-nowrap text-[11px] font-bold text-caution">
               PIT · L{stint.start - 1}
             </span>
           </div>
         )}
         {!whole && stint.index < run.stints.length - 1 && (
           <div className="absolute inset-y-0 right-0 border-l border-caution">
-            <span className="absolute -left-[84px] top-0.5 whitespace-nowrap text-[10px] font-bold text-caution">
+            <span className="absolute -left-[84px] top-0.5 whitespace-nowrap text-[11px] font-bold text-caution">
               PIT → L{stint.end + 1}
             </span>
           </div>
@@ -309,7 +309,7 @@ export function LapChart({ x, focus }: Props) {
           className="pointer-events-none absolute -top-1.5 bottom-0 border-l-2 border-accent"
           style={{ left: `${cursor}%` }}
         >
-          <span className="absolute left-1 -top-0.5 whitespace-nowrap text-[10px] font-bold text-accent">
+          <span className="absolute left-1 -top-0.5 whitespace-nowrap text-[11px] font-bold text-accent">
             NOW
           </span>
         </div>
@@ -344,14 +344,14 @@ export function LapChart({ x, focus }: Props) {
             style={{ left: `${hoverX}%` }}
           >
             <div
-              className="absolute left-0 top-1 w-[216px] rounded-[10px] border border-popover bg-tooltip px-3 py-2.5 text-[12px] shadow-[0_12px_30px_rgba(0,0,0,.5)]"
+              className="absolute left-0 top-1 w-[216px] rounded-[10px] border border-popover bg-tooltip px-3 py-2.5 text-[13px] shadow-[0_12px_30px_rgba(0,0,0,.5)]"
               style={{
                 transform: `translateX(${hoverX > 70 ? "calc(-100% - 8px)" : hoverX < 30 ? "8px" : "-50%"})`,
               }}
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold">Lap {hovered.lap}</span>
-                <span className="flex items-center gap-[5px] text-[11px] text-ink-dim">
+                <span className="flex items-center gap-[5px] text-[12px] text-ink-dim">
                   <span
                     className="size-2 rounded-full"
                     style={{ background: tyreOf(hoveredRun.compound).color }}
@@ -359,7 +359,7 @@ export function LapChart({ x, focus }: Props) {
                   {tyreOf(hoveredRun.compound).name} · {hoveredRun.tyre_life ?? "–"} laps
                 </span>
               </div>
-              <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11.5px]">
+              <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[12.5px]">
                 <span className="text-ink-mute">Actual</span>
                 <span className="text-right">{hovered.done ? fmtLap(hovered.time) : "—"}</span>
                 <span className="text-ink-mute">Predicted</span>
@@ -388,7 +388,7 @@ export function LapChart({ x, focus }: Props) {
                 </span>
               </div>
               {note && (
-                <div className="mt-2 border-t border-control pt-2 text-[11px] leading-[1.4] text-ink-dim">
+                <div className="mt-2 border-t border-control pt-2 text-[12px] leading-[1.4] text-ink-dim">
                   {note}
                 </div>
               )}
