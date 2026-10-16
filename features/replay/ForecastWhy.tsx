@@ -1,12 +1,22 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/components/ui/cn";
 import { useRaceFactors } from "@/lib/api";
 import { fmtLap } from "@/lib/format";
 import { tyreOf } from "@/lib/race/constants";
 import type { Standing } from "@/lib/race/timeline";
 import { useRace } from "@/features/dashboard/race-context";
+import { TOUR_STEPS } from "@/features/tour/steps";
+import { useTour } from "@/features/tour/store";
 
 const FASTER = "var(--color-go)";
 const SLOWER = "var(--color-stop)";
@@ -30,71 +40,60 @@ const colorOf = (item: Item) =>
 /** Factors smaller than this are folded into one "Other" line to keep the list short. */
 const MIN_LISTED = 0.01;
 
-/** One box of the strip: a label, a number, and optionally a bar showing how big it is. */
-function Box({
-  label,
-  value,
-  color,
-  bar,
-  tip,
-  className,
-}: {
-  label: string;
-  value: string;
-  color?: string;
-  /** Size of the bar as a share of the biggest factor, signed: negative grows to the left. */
-  bar?: number;
-  tip: string;
-  className?: string;
-}) {
-  return (
-    <div
-      data-tip={tip}
-      data-tip-color={color}
-      className={cn(
-        "relative min-w-[88px] flex-1 overflow-hidden rounded-lg bg-raised px-2.5 pb-2 pt-1",
-        className,
-      )}
-    >
-      <div className="truncate text-[12.5px] text-ink-mute">{label}</div>
-      <div
-        className="mt-0.5 whitespace-nowrap font-mono text-[15px] font-semibold leading-tight"
-        style={{ color }}
-      >
-        {value}
-      </div>
-      {bar !== undefined && (
-        <div className="absolute inset-x-0 bottom-0 h-[4px] bg-divider" aria-hidden>
-          <span className="absolute inset-y-0 left-1/2 border-l border-ink-faint" />
-          <span
-            className="absolute inset-y-0"
-            style={{
-              background: color,
-              width: `${Math.abs(bar) * 50}%`,
-              ...(bar < 0 ? { right: "50%" } : { left: "50%" }),
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
+/** Width of the card: a name with its reason, a bar, and a value on one row. */
+const CARD_WIDTH = 390;
+/** Height the card needs for a full list; with less room it opens on the roomier side. */
+const CARD_HEIGHT = 400;
+const PINNED_KEY = "nextlap.why.pinned";
+
+/** Whether the visitor left the card pinned open; kept in this browser. */
+function readPinned(): boolean {
+  try {
+    return window.localStorage.getItem(PINNED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writePinned(pinned: boolean) {
+  try {
+    window.localStorage.setItem(PINNED_KEY, pinned ? "1" : "0");
+  } catch {
+    /* the choice just is not remembered */
+  }
 }
 
 /**
- * "Why this forecast": how the number was built, always on screen under the forecast bar. It starts
- * from the average of the last five laps and shows how far each factor moved it, as a row of boxes
- * that ends in the forecast. The split comes from the final model (Shapley values per feature group,
- * stored in `prediction_factors`); each value is relative to a typical lap of the same race, not an
- * absolute effect. `hint` is the small marker for the forecast cell, `strip` the row itself.
+ * "Why this forecast": a "Why?" button on the forecast cell and a card that shows how the number
+ * was built. The card opens on hover or focus and stays open when the cell is clicked (the choice
+ * is remembered, so a visitor who wants it always on keeps it); the guided tour opens it by itself.
+ * The split comes from the final model (Shapley values per feature group, stored in
+ * `prediction_factors`); each value is relative to a typical lap of the same race, not an absolute
+ * effect. A 3 px strip along the bottom of the cell previews the split.
  *
  * Returns null while the split is not available for this lap (no forecast, or not stored yet).
  */
 export function useForecastWhy(
   x: Standing,
   lapNumber: number,
-): { hint: ReactNode; strip: ReactNode } | null {
+): {
+  cellProps: HTMLAttributes<HTMLDivElement> & {
+    ref: React.Ref<HTMLDivElement>;
+  };
+  node: ReactNode;
+} | null {
   const { race, timeline } = useRace();
   const { data } = useRaceFactors(race.race_id);
+  const cell = useRef<HTMLDivElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(readPinned);
+  const [place, setPlace] = useState<{
+    left: number;
+    edge: number;
+    side: "above" | "below";
+    room: number;
+    compact: boolean;
+  }>({ left: 8, edge: 8, side: "above", room: 400, compact: false });
 
   const row = useMemo(
     () =>
@@ -105,6 +104,36 @@ export function useForecastWhy(
       ),
     [data, x.run.driver_code, lapNumber],
   );
+
+  /** Opens above the cell, or below it when there is more room there (the card is tall). */
+  const locate = () => {
+    const box = cell.current?.getBoundingClientRect();
+    if (!box) return;
+    const above = box.top - 16;
+    const below = window.innerHeight - box.bottom - 16;
+    const side = above >= CARD_HEIGHT || above >= below ? "above" : "below";
+    setPlace({
+      left: Math.max(
+        8,
+        Math.min(box.left, window.innerWidth - CARD_WIDTH - 16),
+      ),
+      edge:
+        side === "above" ? window.innerHeight - box.top + 8 : box.bottom + 8,
+      side,
+      room: Math.max(160, side === "above" ? above : below),
+      // Little height (a small window): drop the reason lines so the whole list still fits.
+      compact: (side === "above" ? above : below) < CARD_HEIGHT,
+    });
+  };
+
+  // The guided tour shows the card by itself on its "Why this number?" step.
+  const touring = useTour(
+    (s) => s.open && TOUR_STEPS[s.step]?.target === "why",
+  );
+  const shown = hovered || pinned || touring;
+  useEffect(() => {
+    if (shown) locate();
+  }, [shown, row]);
 
   if (!row) return null;
 
@@ -237,10 +266,41 @@ export function useForecastWhy(
     }
   }
 
-  const hint = (
+  const cellProps = {
+    ref: cell,
+    role: "button" as const,
+    tabIndex: 0,
+    "aria-expanded": shown,
+    "aria-label": "Why this forecast",
+    onMouseEnter: () => setHovered(true),
+    onMouseLeave: () => setHovered(false),
+    onFocus: () => setHovered(true),
+    onBlur: () => setHovered(false),
+    onClick: () => {
+      const next = !pinned;
+      setPinned(next);
+      writePinned(next);
+    },
+    onKeyDown: (event: React.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPinned(false);
+        writePinned(false);
+        setHovered(false);
+      }
+    },
+  };
+
+  const node = (
     <>
-      <span className="pointer-events-none absolute right-3 top-2 rounded-full border border-accent/60 bg-accent/12 px-2 py-px text-[12px] font-bold text-accent">
-        Why ↓
+      <span
+        className={cn(
+          "pointer-events-none absolute right-3 top-2 rounded-full border px-2 py-px text-[12px] font-bold",
+          pinned
+            ? "border-accent bg-accent text-[#111]"
+            : "border-accent/60 bg-accent/12 text-accent",
+        )}
+      >
+        Why?
       </span>
       <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-divider">
         {segments.map(({ item, left, width }) => (
@@ -255,50 +315,119 @@ export function useForecastWhy(
           />
         ))}
       </span>
+      {shown &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-label="Why this forecast"
+            className={cn(
+              "fixed max-w-[calc(100vw-16px)] overflow-y-auto rounded-xl border border-accent/45 border-t-2 border-t-accent bg-[#1b1b1f] px-4 pb-3 pt-3 text-[13.5px] shadow-[0_18px_48px_rgba(0,0,0,.7)]",
+              // Above the tour's dimming layer (z-250) while the tour is explaining it.
+              touring ? "z-[280]" : "z-[100]",
+              pinned ? "pointer-events-auto" : "pointer-events-none",
+            )}
+            style={{
+              left: place.left,
+              ...(place.side === "above"
+                ? { bottom: place.edge }
+                : { top: place.edge }),
+              maxHeight: place.room,
+              width: CARD_WIDTH,
+            }}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-cond text-[26px] font-semibold leading-none">
+                Why {fmtLap(forecast)}
+              </span>
+              <span className="whitespace-nowrap text-[12.5px] text-ink-mute">
+                Lap {lapNumber} · {x.run.driver_code}
+              </span>
+            </div>
+            <div
+              className={cn(
+                "flex items-baseline justify-between rounded-lg bg-raised px-3",
+                place.compact ? "mt-2 py-1" : "mt-2.5 py-1.5",
+              )}
+            >
+              <span className="text-ink-soft">
+                Starts from the average of the last 5 laps
+              </span>
+              <span className="font-mono text-[15px] font-semibold">
+                {fmtLap(row.window_mean_sec)}
+              </span>
+            </div>
+            <div className="mt-1">
+              {lines.map((item) => (
+                <div
+                  key={item.key}
+                  className={cn(
+                    "grid grid-cols-[minmax(0,1fr)_72px_80px] items-center gap-x-3 px-2",
+                    place.compact ? "py-[5px]" : "py-1.5",
+                  )}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[14px] font-semibold">
+                      {item.name}
+                    </span>
+                    {!place.compact && (
+                      <span className="block text-[12.5px] leading-[1.35] text-ink-mute">
+                        {item.why}
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className="relative h-2 rounded-full bg-divider"
+                    aria-hidden
+                  >
+                    <span className="absolute inset-y-[-3px] left-1/2 border-l border-ink-faint" />
+                    <span
+                      className="absolute inset-y-0 rounded-full"
+                      style={{
+                        background: colorOf(item),
+                        width: `${(Math.abs(item.value) / reach) * 50}%`,
+                        ...(item.value < 0
+                          ? { right: "50%" }
+                          : { left: "50%" }),
+                      }}
+                    />
+                  </span>
+                  <span
+                    className="whitespace-nowrap text-right font-mono text-[14.5px] font-semibold"
+                    style={{ color: colorOf(item) }}
+                  >
+                    {signed(item.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-1 flex items-baseline justify-between border-t border-hairline pt-2.5">
+              <span className="text-ink-soft">
+                Forecast{" "}
+                <b className="ml-1 font-mono text-[18px] text-ink">
+                  {fmtLap(forecast)}
+                </b>
+              </span>
+              <span className="font-mono text-[13px] text-ink-dim">
+                {actual === null
+                  ? "In progress"
+                  : `Actual ${fmtLap(actual)} (${actual - forecast >= 0 ? "+" : MINUS}${Math.abs(actual - forecast).toFixed(2)})`}
+              </span>
+            </div>
+            {!place.compact && (
+              <div className="mt-1.5 text-[12px] text-ink-mute">
+                Green made the lap faster, red slower, compared with a typical
+                lap of this race.{" "}
+                {pinned
+                  ? "Click Why? to close."
+                  : "Click Why? to keep it open."}
+              </div>
+            )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 
-  const strip = (
-    <div
-      data-tour="why"
-      className="flex items-stretch gap-2 border-t border-divider bg-[rgba(22,22,25,.96)] px-3 py-1.5"
-    >
-      <div className="flex w-[68px] shrink-0 flex-col justify-center text-[12.5px] font-bold leading-tight text-accent">
-        Why this forecast
-      </div>
-      <div className="flex min-w-0 flex-1 items-stretch gap-1.5 overflow-x-auto">
-        <Box
-          label="Last 5 laps"
-          value={fmtLap(row.window_mean_sec)}
-          tip={
-            "# Starting point\nThe average lap time of the last 5 laps.\nEvery factor below moves the forecast away from it."
-          }
-        />
-        {lines.map((item) => (
-          <Box
-            key={item.key}
-            label={item.name}
-            value={signed(item.value)}
-            color={colorOf(item)}
-            bar={item.value / reach}
-            tip={`# ${item.name}\n${item.why}\nEffect | ${signed(item.value)}\nCompared with a typical lap of this race.`}
-          />
-        ))}
-        <Box
-          label={
-            actual === null ? "Forecast" : `Forecast · actual ${fmtLap(actual)}`
-          }
-          value={fmtLap(forecast)}
-          className="border border-accent/60 bg-accent/10"
-          tip={
-            actual === null
-              ? `# Forecast\nStarting point plus every factor.`
-              : `# Forecast\nStarting point plus every factor.\nActual | ${fmtLap(actual)}\nDifference | ${actual - forecast >= 0 ? "+" : MINUS}${Math.abs(actual - forecast).toFixed(3)} s`
-          }
-        />
-      </div>
-    </div>
-  );
-
-  return { hint, strip };
+  return { cellProps, node };
 }

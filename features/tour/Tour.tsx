@@ -18,13 +18,15 @@ const EDGE = 8;
 const PAD = 6;
 const CARD_WIDTH = 340;
 
-function measure(target: string): Box | null {
-  const el = document.querySelector<HTMLElement>(`[data-tour="${target}"]`);
+function measureEl(el: Element | null): Box | null {
   if (!el) return null;
   const r = el.getBoundingClientRect();
   if (r.width === 0 || r.height === 0) return null;
   return { left: r.left, top: r.top, width: r.width, height: r.height };
 }
+
+const measure = (target: string) =>
+  measureEl(document.querySelector(`[data-tour="${target}"]`));
 
 const sameBox = (a: Box | null, b: Box | null) =>
   a === b ||
@@ -35,13 +37,33 @@ const sameBox = (a: Box | null, b: Box | null) =>
     a.width === b.width &&
     a.height === b.height);
 
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(value, max));
 
-/** Below the target if it fits, else above, else beside it, else inside its top edge. */
-function place(box: Box | null, vw: number, vh: number, height: number, corner: boolean) {
+/**
+ * Next to the card the step opens (`anchor`) when there is one, so the two read as a pair; else
+ * below the target if it fits, else above, else beside it, else inside its top edge.
+ */
+function place(
+  box: Box | null,
+  anchor: Box | null,
+  vw: number,
+  vh: number,
+  height: number,
+) {
   const maxLeft = Math.max(EDGE, vw - CARD_WIDTH - EDGE);
-  if (!box) return { left: clamp((vw - CARD_WIDTH) / 2, EDGE, maxLeft), top: Math.max(EDGE, vh / 3) };
-  if (corner) return { left: maxLeft, top: 72 };
+  if (!box)
+    return {
+      left: clamp((vw - CARD_WIDTH) / 2, EDGE, maxLeft),
+      top: Math.max(EDGE, vh / 3),
+    };
+  if (anchor) {
+    const top = clamp(anchor.top, EDGE, Math.max(EDGE, vh - height - EDGE));
+    const right = anchor.left + anchor.width + GAP;
+    if (right + CARD_WIDTH <= vw - EDGE) return { left: right, top };
+    const before = anchor.left - GAP - CARD_WIDTH;
+    if (before >= EDGE) return { left: before, top };
+  }
   const left = clamp(box.left, EDGE, maxLeft);
   const below = box.top + box.height + PAD + GAP;
   if (below + height <= vh - EDGE) return { left, top: below };
@@ -52,7 +74,10 @@ function place(box: Box | null, vw: number, vh: number, height: number, corner: 
   if (right + CARD_WIDTH <= vw - EDGE) return { left: right, top: side };
   const before = box.left - PAD - GAP - CARD_WIDTH;
   if (before >= EDGE) return { left: before, top: side };
-  return { left, top: clamp(box.top + GAP, EDGE, Math.max(EDGE, vh - height - EDGE)) };
+  return {
+    left,
+    top: clamp(box.top + GAP, EDGE, Math.max(EDGE, vh - height - EDGE)),
+  };
 }
 
 /**
@@ -61,7 +86,13 @@ function place(box: Box | null, vw: number, vh: number, height: number, corner: 
  * while the card is open. Finishing or skipping is remembered in this browser; the header's "?"
  * button opens it again.
  */
-export function Tour({ view, onView }: { view: View; onView: (view: View) => void }) {
+export function Tour({
+  view,
+  onView,
+}: {
+  view: View;
+  onView: (view: View) => void;
+}) {
   const { driver } = useRace();
   // A link straight to another view is not interrupted; the header's "?" still opens the tour.
   const [startView] = useState(view);
@@ -69,6 +100,7 @@ export function Tour({ view, onView }: { view: View; onView: (view: View) => voi
   const step = useTour((s) => s.step);
   const current = TOUR_STEPS[step];
   const [box, setBox] = useState<Box | null>(null);
+  const [anchor, setAnchor] = useState<Box | null>(null);
   const [screen, setScreen] = useState({ w: 0, h: 0 });
   const [height, setHeight] = useState(220);
   const card = useRef<HTMLDivElement>(null);
@@ -110,6 +142,7 @@ export function Tour({ view, onView }: { view: View; onView: (view: View) => voi
 
   // Follow the target while the layout moves (resize, panels resizing, replay ticks).
   const target = current.target;
+  const beside = current.beside;
   useEffect(() => {
     if (!open) return;
     document
@@ -119,17 +152,24 @@ export function Tour({ view, onView }: { view: View; onView: (view: View) => voi
     const tick = () => {
       const next = measure(target);
       setBox((previous) => (sameBox(previous, next) ? previous : next));
+      const near = beside ? measureEl(document.querySelector(beside)) : null;
+      setAnchor((previous) => (sameBox(previous, near) ? previous : near));
       const w = window.innerWidth;
       const h = window.innerHeight;
-      setScreen((previous) => (previous.w === w && previous.h === h ? previous : { w, h }));
+      setScreen((previous) =>
+        previous.w === w && previous.h === h ? previous : { w, h },
+      );
       const cardHeight = card.current?.offsetHeight;
-      if (cardHeight) setHeight((previous) => (previous === cardHeight ? previous : cardHeight));
+      if (cardHeight)
+        setHeight((previous) =>
+          previous === cardHeight ? previous : cardHeight,
+        );
       frame = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(frame);
     // `view` is a dependency so the target is looked up again once the page has switched.
-  }, [open, target, view]);
+  }, [open, target, beside, view]);
 
   useEffect(() => {
     if (!open) return;
@@ -143,7 +183,7 @@ export function Tour({ view, onView }: { view: View; onView: (view: View) => voi
   if (!open || typeof document === "undefined") return null;
 
   const last = step === TOUR_STEPS.length - 1;
-  const at = place(box, screen.w, screen.h, height, current.corner === true);
+  const at = place(box, anchor, screen.w, screen.h, height);
   const { go, close } = useTour.getState();
 
   return createPortal(
@@ -161,14 +201,22 @@ export function Tour({ view, onView }: { view: View; onView: (view: View) => voi
           }}
         />
       ) : (
-        <div aria-hidden className="pointer-events-none fixed inset-0 z-[250] bg-black/65" />
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-[250] bg-black/65"
+        />
       )}
       <div
         ref={card}
         role="dialog"
         aria-label="Guided tour"
         className="fixed z-[300] rounded-xl border border-popover bg-tooltip p-4 text-[12.5px] shadow-[0_12px_30px_rgba(0,0,0,.5)] transition-[left,top] duration-200"
-        style={{ left: at.left, top: at.top, width: CARD_WIDTH, maxWidth: "calc(100vw - 16px)" }}
+        style={{
+          left: at.left,
+          top: at.top,
+          width: CARD_WIDTH,
+          maxWidth: "calc(100vw - 16px)",
+        }}
       >
         <div className="flex items-center justify-between text-[11px] text-ink-mute">
           <span className="font-bold tracking-[.08em]">
@@ -181,7 +229,9 @@ export function Tour({ view, onView }: { view: View; onView: (view: View) => voi
               key={name}
               type="button"
               data-tip={`Jump to the ${VIEW_NAMES[name]} part of the tour`}
-              onClick={() => go(TOUR_STEPS.findIndex((item) => item.view === name))}
+              onClick={() =>
+                go(TOUR_STEPS.findIndex((item) => item.view === name))
+              }
               className={cn(
                 "cursor-pointer rounded-md border px-2 py-0.5 text-[11px] font-semibold",
                 name === current.view

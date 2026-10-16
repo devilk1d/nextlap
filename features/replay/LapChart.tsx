@@ -94,7 +94,7 @@ export function LapChart({ x, focus }: Props) {
   return (
     <section
       data-tour="lapchart"
-      className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[260px]"
+      className="flex min-h-[280px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-line bg-panel wide:min-h-[290px]"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-divider px-3.5 py-[9px]">
         <span className="text-[14px] font-semibold">Lap times</span>
