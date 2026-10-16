@@ -267,121 +267,116 @@ export function ForecastBar({ x, focus, time, leaderCode }: Props) {
   );
 
   return (
-    <div className="relative z-[2]">
-      <div
-        data-tour="forecast"
-        className="flex items-stretch border-t border-divider bg-[rgba(22,22,25,.96)]"
+    <div
+      data-tour="forecast"
+      className="relative z-[2] flex items-stretch border-t border-divider bg-[rgba(22,22,25,.96)]"
+    >
+      <Cell
+        {...(why?.cellProps ?? {})}
+        data-tour="why"
+        className={cn("relative w-[168px] shrink-0", why && "cursor-help")}
       >
-        <Cell className="relative w-[168px] shrink-0">
-          {why?.hint}
-          <span className={LABEL}>{headlineLabel}</span>
-          <span
-            className="mt-1 flex h-[28px] items-center"
-            style={{ color: headlineColor }}
-          >
-            <RollingText
-              value={headline}
-              flash={reveal ? flash : undefined}
-              className={cn(
-                "font-cond font-semibold",
-                headline === "No forecast" ? "text-[22px]" : "text-[28px]",
-              )}
-            />
+        {why?.node}
+        <span className={LABEL}>{headlineLabel}</span>
+        <span
+          className="mt-1 flex h-[28px] items-center"
+          style={{ color: headlineColor }}
+        >
+          <RollingText
+            value={headline}
+            flash={reveal ? flash : undefined}
+            className={cn(
+              "font-cond font-semibold",
+              headline === "No forecast" ? "text-[22px]" : "text-[28px]",
+            )}
+          />
+        </span>
+        <span
+          data-tip={subTitle}
+          className="mt-1 truncate text-[12px] leading-none"
+          style={{
+            color:
+              reveal && lastDelta !== null
+                ? deltaColor
+                : "var(--color-ink-dim)",
+          }}
+        >
+          {subline}
+        </span>
+      </Cell>
+
+      <Cell className="min-w-0 flex-1">
+        <span className={cn(LABEL, "flex items-baseline justify-between")}>
+          <span>
+            {holding && lastLap ? `L${lastLap.lap_number} sectors` : "Sectors"}
           </span>
           <span
-            data-tip={subTitle}
-            className="mt-1 truncate text-[12px] leading-none"
+            className="font-mono text-[12px]"
             style={{
               color:
-                reveal && lastDelta !== null
-                  ? deltaColor
-                  : "var(--color-ink-dim)",
+                holding && live
+                  ? "var(--color-ink-mute)"
+                  : "var(--color-accent)",
             }}
           >
-            {subline}
+            {holding && live ? "lap complete" : done ? "—" : fmtTimer(elapsed)}
           </span>
-        </Cell>
+        </span>
+        <span className="mt-2 flex gap-2">
+          {[0, 1, 2].map((k) => {
+            const finished = holding || (live && progress.done[k]);
+            const lap = holding && lastLap ? lastLap.lap_number : lapNumber;
+            return (
+              <Sector
+                key={k}
+                name={`S${k + 1}`}
+                time={sectorTimes[k]}
+                tone={
+                  finished
+                    ? sectorToneOf(timeline, run, lap, k as 0 | 1 | 2)
+                    : "none"
+                }
+                state={
+                  finished
+                    ? "done"
+                    : live && progress.current === k
+                      ? "current"
+                      : "pending"
+                }
+                fill={progress.fill[k]}
+                grow={progress.durations[k]}
+              />
+            );
+          })}
+        </span>
+      </Cell>
 
-        <Cell className="min-w-0 flex-1">
-          <span className={cn(LABEL, "flex items-baseline justify-between")}>
-            <span>
-              {holding && lastLap
-                ? `L${lastLap.lap_number} sectors`
-                : "Sectors"}
-            </span>
-            <span
-              className="font-mono text-[12px]"
-              style={{
-                color:
-                  holding && live
-                    ? "var(--color-ink-mute)"
-                    : "var(--color-accent)",
-              }}
-            >
-              {holding && live
-                ? "lap complete"
-                : done
-                  ? "—"
-                  : fmtTimer(elapsed)}
-            </span>
-          </span>
-          <span className="mt-2 flex gap-2">
-            {[0, 1, 2].map((k) => {
-              const finished = holding || (live && progress.done[k]);
-              const lap = holding && lastLap ? lastLap.lap_number : lapNumber;
-              return (
-                <Sector
-                  key={k}
-                  name={`S${k + 1}`}
-                  time={sectorTimes[k]}
-                  tone={
-                    finished
-                      ? sectorToneOf(timeline, run, lap, k as 0 | 1 | 2)
-                      : "none"
-                  }
-                  state={
-                    finished
-                      ? "done"
-                      : live && progress.current === k
-                        ? "current"
-                        : "pending"
-                  }
-                  fill={progress.fill[k]}
-                  grow={progress.durations[k]}
-                />
-              );
-            })}
-          </span>
-        </Cell>
-
-        <Cell className="shrink-0">
-          <span className={LABEL}>
-            {lastLap ? `Last lap L${lastLap.lap_number}` : "Last lap"}
+      <Cell className="shrink-0">
+        <span className={LABEL}>
+          {lastLap ? `Last lap L${lastLap.lap_number}` : "Last lap"}
+        </span>
+        <span
+          className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap leading-none"
+          data-tip={
+            lastDelta === null
+              ? "The last lap had no forecast"
+              : `Against its forecast: ${inside ? "within" : "outside"} the model's typical error of ±${tolerance?.toFixed(2)} s`
+          }
+        >
+          <span className="font-mono text-[15px] font-semibold">
+            {lastLap ? fmtLap(lastLap.lap_time_sec) : "—"}
           </span>
           <span
-            className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap leading-none"
-            data-tip={
-              lastDelta === null
-                ? "The last lap had no forecast"
-                : `Against its forecast: ${inside ? "within" : "outside"} the model's typical error of ±${tolerance?.toFixed(2)} s`
-            }
+            className="font-mono text-[12px] font-semibold"
+            style={{ color: deltaColor }}
           >
-            <span className="font-mono text-[15px] font-semibold">
-              {lastLap ? fmtLap(lastLap.lap_time_sec) : "—"}
-            </span>
-            <span
-              className="font-mono text-[12px] font-semibold"
-              style={{ color: deltaColor }}
-            >
-              {lastDelta === null ? "" : fmtSigned(lastDelta)}
-            </span>
+            {lastDelta === null ? "" : fmtSigned(lastDelta)}
           </span>
-          <span className="mt-1 whitespace-nowrap font-mono text-[12px] leading-none text-ink-mute">
-            Pred {fmtLap(lastPredicted)}
-          </span>
-        </Cell>
-      </div>
-      {why?.strip}
+        </span>
+        <span className="mt-1 whitespace-nowrap font-mono text-[12px] leading-none text-ink-mute">
+          Pred {fmtLap(lastPredicted)}
+        </span>
+      </Cell>
     </div>
   );
 }

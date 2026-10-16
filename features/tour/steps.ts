@@ -13,8 +13,8 @@ export type TourStep = {
   forecast?: boolean;
   /** Moves the replay to this share of the race, so charts that fill "so far" have content. */
   at?: number;
-  /** Pin the card to the top-right corner so it does not cover a popover the step opens. */
-  corner?: boolean;
+  /** CSS selector of a card the step opens; the tour card sits right next to it. */
+  beside?: string;
 };
 
 export const VIEW_NAMES: Record<View, string> = {
@@ -98,9 +98,10 @@ export const TOUR_STEPS: TourStep[] = [
     target: "why",
     view: "replay",
     title: "Why this number?",
-    body: "This strip shows how the forecast was built. It starts from the average of the last 5 laps, and each factor (recent pace, traffic, tyres, track, race progress) then moves it: green makes the lap faster, red slower. Hover a box to see what it means. Values are relative to a typical lap of this race: they hint at which information the model used, not at what caused the time.",
+    body: "This card opens when you hover the forecast, and stays open if you click Why?. It starts from the average of the last 5 laps, and each factor (recent pace, traffic, tyres, track, race progress) then moves it: green makes the lap faster, red slower. Values are relative to a typical lap of this race: they hint at which information the model used, not at what caused the time.",
     data: "Shapley values of the final model, split by factor group.",
     forecast: true,
+    beside: '[role="dialog"][aria-label="Why this forecast"]',
   },
 
   {
