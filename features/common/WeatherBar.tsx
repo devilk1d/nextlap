@@ -25,9 +25,9 @@ function WeatherCell({
     >
       <div className="flex items-baseline gap-[3px] whitespace-nowrap text-accent">
         <span className="font-cond text-[22px] font-semibold leading-none">{value}</span>
-        <span className="text-[11px] font-semibold">{unit}</span>
+        <span className="text-[12px] font-semibold">{unit}</span>
       </div>
-      <div className="mt-[3px] truncate whitespace-nowrap text-[11.5px] text-ink-mute">{name}</div>
+      <div className="mt-[3px] truncate whitespace-nowrap text-[12.5px] text-ink-mute">{name}</div>
     </div>
   );
 }
@@ -74,12 +74,12 @@ export function WeatherBar({ lap, lapsToGo }: { lap: RunLap; lapsToGo: number })
         <WeatherCell key={cell.name} {...cell} />
       ))}
       <div className="min-w-0 px-2 py-1.5 text-right @min-[900px]:px-4 @min-[900px]:py-[9px]">
-        <div className="whitespace-nowrap text-[11.5px] text-ink-mute">
+        <div className="whitespace-nowrap text-[12.5px] text-ink-mute">
           {lengthKm ? `${lengthKm.toFixed(3)} km · ` : ""}
           {timeline.totalLaps} laps
           <span className="hidden @min-[1000px]:inline"> · {fmtDate(race.event_date)}</span>
         </div>
-        <div className="mt-[3px] whitespace-nowrap text-[13px] font-semibold">
+        <div className="mt-[3px] whitespace-nowrap text-[14px] font-semibold">
           <span className="@min-[1100px]:hidden">{race.circuit.short_name}</span>
           <span className="hidden @min-[1100px]:inline">
             {race.circuit.official_name ?? race.circuit.short_name}

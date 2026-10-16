@@ -40,7 +40,7 @@ function Tyres({ x, focus }: { x: Standing; focus: Focus }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-[15px] font-bold">{tyre.name}</div>
-          <div className="mt-0.5 text-[11.5px] text-ink-mute">
+          <div className="mt-0.5 text-[12.5px] text-ink-mute">
             {stint.fresh === false ? "Used set" : "New set"} · fitted L{stint.start}
           </div>
         </div>
@@ -48,11 +48,11 @@ function Tyres({ x, focus }: { x: Standing; focus: Focus }) {
           <div className="font-cond text-[26px] font-semibold leading-none">
             {currentLap.tyre_life ?? "–"}
           </div>
-          <div className="text-[11px] text-ink-mute">laps old</div>
+          <div className="text-[12px] text-ink-mute">laps old</div>
         </div>
       </div>
       <div>
-        <div className="flex justify-between text-[11.5px]">
+        <div className="flex justify-between text-[12.5px]">
           <span className="text-ink-mute">Race strategy</span>
           <span>
             {run.stints.length - 1}-stop ·{" "}
@@ -96,12 +96,12 @@ function Telemetry({ x, focus, time }: { x: Standing; focus: Focus; time: number
       </div>
       <LapStats focus={focus} />
       <div>
-        <div className="text-[11.5px] text-ink-mute">Speed traps · km/h</div>
+        <div className="text-[12.5px] text-ink-mute">Speed traps · km/h</div>
         <div className="mt-1.5 grid grid-cols-4 gap-1">
           {traps.map(([name, value]) => (
             <div key={name} className="rounded-md bg-raised px-2 py-1.5">
-              <div className="text-[10px] font-bold text-ink-mute">{name}</div>
-              <div className="mt-0.5 font-mono text-[12px]">{num(value)}</div>
+              <div className="text-[11px] font-bold text-ink-mute">{name}</div>
+              <div className="mt-0.5 font-mono text-[13px]">{num(value)}</div>
             </div>
           ))}
         </div>

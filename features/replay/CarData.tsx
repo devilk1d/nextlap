@@ -96,7 +96,7 @@ function PedalColumn({
         <span className={LABEL}>{name}</span>
         <span className="flex items-baseline gap-0.5" style={{ color: valueColor }}>
           {value}
-          {unit && <span className="text-[11px] font-semibold text-ink-mute">{unit}</span>}
+          {unit && <span className="text-[12px] font-semibold text-ink-mute">{unit}</span>}
         </span>
       </div>
     </div>
@@ -125,23 +125,23 @@ export function CarData({ x, time }: Props) {
         <TeamLogo team={x.run.team} color={x.run.color} size={32} />
         <div className="min-w-0 leading-tight">
           <div className="truncate text-[15px] font-bold tracking-[.02em]">{surname}</div>
-          <div className="truncate text-[12px] text-ink-mute">{x.run.team}</div>
+          <div className="truncate text-[13px] text-ink-mute">{x.run.team}</div>
         </div>
       </div>
 
       <div>
         <div className={cn(LABEL, "flex justify-between")}>
           <span>Speed</span>
-          <span className="font-mono text-[10.5px]">Top {whole(topSpeed)}</span>
+          <span className="font-mono text-[11.5px]">Top {whole(topSpeed)}</span>
         </div>
         <div className="mb-2 mt-1.5 flex items-end justify-between gap-2">
           <span className="flex items-baseline gap-1.5">
             <Figure live={live} value={whole(speed)} className={cn(FIGURE, "text-[48px]")} />
-            <span className="text-[11px] font-semibold tracking-[.08em] text-ink-mute">KMH</span>
+            <span className="text-[12px] font-semibold tracking-[.08em] text-ink-mute">KMH</span>
           </span>
           <span className="flex flex-col items-end gap-0.5">
             <Figure live={live} value={whole(rpm)} className={cn(FIGURE, "text-[20px]")} />
-            <span className="text-[10px] font-semibold leading-none tracking-[.08em] text-ink-mute">
+            <span className="text-[11px] font-semibold leading-none tracking-[.08em] text-ink-mute">
               RPM
             </span>
           </span>
@@ -195,7 +195,7 @@ export function CarData({ x, time }: Props) {
                 : "DRS closed"
               : `DRS was open for ${(lap.tel_pct_drs_open ?? 0).toFixed(1)}% of the lap`
           }
-          className="inline-flex h-[28px] items-center rounded-md px-3 text-[12px] font-bold tracking-[.04em]"
+          className="inline-flex h-[28px] items-center rounded-md px-3 text-[13px] font-bold tracking-[.04em]"
           style={{
             background: drs ? THROTTLE_COLOR : "var(--color-control)",
             color: drs ? "#0b2414" : "var(--color-ink-faint)",
@@ -207,7 +207,7 @@ export function CarData({ x, time }: Props) {
           data-tip={live ? "Current gear" : "Most used gear on the lap"}
           className="flex items-baseline gap-2"
         >
-          <span className="text-[11px] font-semibold tracking-[.1em] text-ink-mute">GEAR</span>
+          <span className="text-[12px] font-semibold tracking-[.1em] text-ink-mute">GEAR</span>
           <Figure
             live={live}
             value={gear == null ? "—" : String(gear)}

@@ -16,7 +16,7 @@ type Props = {
   onPick: (code: string) => void;
 };
 
-const ROW = "grid grid-cols-[20px_28px_3px_minmax(0,1fr)_auto_38px] items-center gap-2 px-3";
+const ROW = "grid grid-cols-[24px_28px_3px_minmax(0,1fr)_auto_38px] items-center gap-2 px-3";
 /** Fixed row height: rows are positioned by `index × ROW_HEIGHT` so they can slide. */
 const ROW_HEIGHT = 28;
 /** Moves further than this (a jump in the replay, not an overtake) slide without a flash. */
@@ -104,7 +104,7 @@ function LiveRow({ s, index, mode, on, onPick }: RowProps) {
       )}
       <span className="relative font-cond text-[15px] font-bold">{s.position}</span>
       <span
-        className="relative text-[10.5px] font-bold"
+        className="relative text-[11.5px] font-bold"
         style={{
           color:
             change > 0
@@ -117,10 +117,10 @@ function LiveRow({ s, index, mode, on, onPick }: RowProps) {
         {change > 0 ? `▲${change}` : change < 0 ? `▼${-change}` : "–"}
       </span>
       <TeamBar color={s.run.color} height={16} />
-      <span className="relative text-[12.5px] font-bold">{code}</span>
+      <span className="relative text-[13.5px] font-bold">{code}</span>
       <span
         className={cn(
-          "relative whitespace-nowrap text-right font-mono text-[11.5px]",
+          "relative whitespace-nowrap text-right font-mono text-[12.5px]",
           attacking ? "text-accent" : "text-ink",
           s.position === 1 && "text-ink-mute",
         )}
@@ -128,7 +128,7 @@ function LiveRow({ s, index, mode, on, onPick }: RowProps) {
         {gapText(s, mode)}
       </span>
       <span
-        className="relative flex items-center justify-end gap-1 text-[11px] font-semibold"
+        className="relative flex items-center justify-end gap-1 text-[12px] font-semibold"
         style={{ color: tyre.color }}
       >
         <TyreDot color={tyreOf(s.lap.compound).color} />
@@ -160,7 +160,7 @@ export function LiveOrder({ standings, highlight, onPick }: Props) {
         {CSS}
       </style>
       <div className="flex items-center justify-between gap-2 border-b border-divider px-3.5 py-[9px]">
-        <span className="whitespace-nowrap text-[13px] font-semibold">Live order</span>
+        <span className="whitespace-nowrap text-[14px] font-semibold">Live order</span>
         <Segmented
           variant="compact"
           value={mode}
@@ -174,7 +174,7 @@ export function LiveOrder({ standings, highlight, onPick }: Props) {
       <div
         className={cn(
           ROW,
-          "pb-1 pt-1.5 text-[10px] font-bold tracking-[.06em] text-ink-mute gap-2",
+          "pb-1 pt-1.5 text-[11px] font-bold tracking-[.06em] text-ink-mute gap-2",
         )}
       >
         <span>POS</span>

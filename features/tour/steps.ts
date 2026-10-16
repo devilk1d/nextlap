@@ -98,11 +98,11 @@ export const TOUR_STEPS: TourStep[] = [
     target: "why",
     view: "replay",
     title: "Why this number?",
-    body: "This is what opens when you hover or click the forecast. It starts from the average of the last 5 laps, then each factor (recent pace, traffic, tyres, track, race progress) moves it up or down. Values are relative to a typical lap of this race: they hint at which information the model used, not at what caused the time.",
+    body: "This strip shows how the forecast was built. It starts from the average of the last 5 laps, and each factor (recent pace, traffic, tyres, track, race progress) then moves it: green makes the lap faster, red slower. Hover a box to see what it means. Values are relative to a typical lap of this race: they hint at which information the model used, not at what caused the time.",
     data: "Shapley values of the final model, split by factor group.",
     forecast: true,
-    corner: true,
   },
+
   {
     target: "lapchart",
     view: "replay",

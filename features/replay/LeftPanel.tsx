@@ -106,7 +106,7 @@ function Dot({
           boxShadow: `0 0 0 2px ${ring}`,
         }}
       />
-      <span className="text-[10.5px] font-bold" style={{ color: labelColor }}>
+      <span className="text-[11.5px] font-bold" style={{ color: labelColor }}>
         {label}
       </span>
     </div>
@@ -125,23 +125,23 @@ function GapBlock({ x }: { x: Standing }) {
     <div className="flex-none border-b border-divider px-3.5 pb-2.5 pt-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] font-bold tracking-[.08em] text-ink-mute">GAP AHEAD</div>
+          <div className="text-[12px] font-bold tracking-[.08em] text-ink-mute">GAP AHEAD</div>
           <div
             className="mt-[5px] font-cond text-[30px] font-semibold leading-none"
             style={{ color: closeAhead ? "var(--color-accent)" : undefined }}
           >
             {!ahead ? "—" : lapsAhead ? fmtLapsDown(lapsAhead) : fmtGap(gapAhead ?? 0)}
           </div>
-          <div className="mt-[5px] flex items-center gap-1.5 whitespace-nowrap text-[12px] font-semibold">
+          <div className="mt-[5px] flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold">
             <TeamBar color={ahead?.run.color ?? "transparent"} height={13} />
             {ahead ? `P${ahead.position} ${ahead.run.driver_code}` : "No car ahead"}
           </div>
-          <div className="mt-[3px] text-[11.5px]" style={{ color: aTrendColor }}>
+          <div className="mt-[3px] text-[12.5px]" style={{ color: aTrendColor }}>
             {aTrend}
           </div>
         </div>
         <div className="min-w-0 text-right">
-          <div className="text-[11px] font-bold tracking-[.08em] text-ink-mute">GAP BEHIND</div>
+          <div className="text-[12px] font-bold tracking-[.08em] text-ink-mute">GAP BEHIND</div>
           <div
             className="mt-[5px] font-cond text-[30px] font-semibold leading-none"
             style={{ color: closeBehind ? "var(--color-stop)" : undefined }}
@@ -152,11 +152,11 @@ function GapBlock({ x }: { x: Standing }) {
                 ? fmtLapsDown(lapsBehind)
                 : `−${(gapBehind ?? 0).toFixed(3)}`}
           </div>
-          <div className="mt-[5px] flex items-center justify-end gap-1.5 whitespace-nowrap text-[12px] font-semibold">
+          <div className="mt-[5px] flex items-center justify-end gap-1.5 whitespace-nowrap text-[13px] font-semibold">
             {behind ? `P${behind.position} ${behind.run.driver_code}` : "No car behind"}
             <TeamBar color={behind?.run.color ?? "transparent"} height={13} />
           </div>
-          <div className="mt-[3px] text-[11.5px]" style={{ color: bTrendColor }}>
+          <div className="mt-[3px] text-[12.5px]" style={{ color: bTrendColor }}>
             {bTrend}
           </div>
         </div>
@@ -194,13 +194,13 @@ function GapBlock({ x }: { x: Standing }) {
           />
         )}
       </div>
-      <div className="mt-0.5 flex justify-between text-[10.5px] text-ink-mute">
+      <div className="mt-0.5 flex justify-between text-[11.5px] text-ink-mute">
         <span>← behind · 4 s</span>
         <span className="text-accent">±1 s DRS</span>
         <span>ahead · 4 s →</span>
       </div>
       <div
-        className="mt-2.5 rounded-lg bg-raised px-2.5 py-[7px] text-[12px] font-semibold"
+        className="mt-2.5 rounded-lg bg-raised px-2.5 py-[7px] text-[13px] font-semibold"
         style={{ color: statusColor }}
       >
         {status}
@@ -224,12 +224,12 @@ function Stat({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[11.5px] text-ink-mute">{name}</div>
-      <div className="mt-[3px] whitespace-nowrap text-[15px] font-bold" style={{ color }}>
+      <div className="text-[12.5px] text-ink-mute">{name}</div>
+      <div className="mt-[3px] whitespace-nowrap font-cond text-[21px] font-semibold leading-none" style={{ color }}>
         {value}
       </div>
       <div
-        className="mt-0.5 truncate whitespace-nowrap text-[11px]"
+        className="mt-0.5 truncate whitespace-nowrap text-[12px]"
         style={{ color: subColor ?? MUTED }}
       >
         {sub}
@@ -349,7 +349,7 @@ export function LeftPanel() {
             />
           )}
         </Dropdown>
-        <span className="whitespace-nowrap text-[11.5px] text-ink-mute">
+        <span className="whitespace-nowrap text-[12.5px] text-ink-mute">
           {race.year} · {stripGrandPrix(race.event_name)}
         </span>
       </div>
@@ -360,7 +360,7 @@ export function LeftPanel() {
           style={{ background: gradient(x.run.color) }}
         >
           <DriverFace code={x.run.driver_code} color={x.run.color} size={104} square eager />
-          <span className="absolute left-2.5 top-2.5 text-[11px] font-bold tracking-[.12em] [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
+          <span className="absolute left-2.5 top-2.5 text-[12px] font-bold tracking-[.12em] [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
             {x.run.driver_code}
           </span>
           <span className="absolute bottom-1.5 left-2 font-display text-[34px] leading-none text-white/95 [text-shadow:0_1px_4px_rgba(0,0,0,.65)]">
@@ -369,11 +369,11 @@ export function LeftPanel() {
         </div>
         <div className="flex min-w-0 flex-col justify-center gap-1 px-3.5 py-3">
           <div className="truncate text-[16px] font-bold">{x.run.name}</div>
-          <div className="text-[12px] text-ink-mute">{x.run.team}</div>
+          <div className="text-[13px] text-ink-mute">{x.run.team}</div>
           <div className="mt-1.5 flex items-baseline gap-2">
             <span className="font-cond text-[30px] font-bold leading-none">P{x.position}</span>
             <span
-              className="text-[12px] font-semibold"
+              className="text-[13px] font-semibold"
               style={{ color: change > 0 ? GO : change < 0 ? STOP : MUTED }}
             >
               {change > 0
